@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<!-- artifact:inicio -->
+<title>Casa Bali</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Visor de obra a pantalla completa: rótulo y herramientas arriba, línea de tiempo de obra abajo, paneles flotantes. */
+:root {
+  --bg: #dfe5ea;
+  --panel: #f7f9fa;
+  --fg: #1c242c;
+  --muted: #5b6874;
+  --line: #c9d2da;
+  --accent: #1f5fbf;
+  --accent-fg: #ffffff;
+  --track: #e6ebef;
+  --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --e0: #8d8a83; --e1: #4f6d8f; --e2: #c9813b; --e3: #b25a3c; --e4: #4f8a5b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161b; --panel: #192129; --fg: #e4eaef; --muted: #93a1ad; --line: #2e3a46;
+    --accent: #6fa2ff; --accent-fg: #0d1520; --track: #232d37; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161b; --panel: #192129; --fg: #e4eaef; --muted: #93a1ad; --line: #2e3a46;
+  --accent: #6fa2ff; --accent-fg: #0d1520; --track: #232d37; color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px;
+  overflow: hidden; -webkit-font-smoothing: antialiased;
+}
+#escena { position: fixed; inset: 0; touch-action: none; }
+#escena canvas { display: block; width: 100%; height: 100%; }
+
+.capa-ui { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 2;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.capa-ui > * { pointer-events: auto; }
+
+.barra { top: 0; padding-top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+
+.rotulo { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; display: grid; grid-template-columns: auto auto; min-width: 0; }
+.rotulo > div { padding: 7px 12px; }
+.ronda { font: 500 11px var(--font-num); color: var(--muted); letter-spacing: 0.04em; margin-left: 6px; text-transform: uppercase; }
+.rotulo-nombre { grid-column: 1 / -1; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 20px; letter-spacing: 0.01em; line-height: 1.1; }
+.rotulo-dato { display: flex; flex-direction: column; gap: 1px; }
+.rotulo-dato + .rotulo-dato { border-left: 1px solid var(--line); }
+.etiqueta { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.valor { font-family: var(--font-num); font-size: 13px; }
+
+.herramientas { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; min-width: 0; }
+.boton {
+  font: 600 13px/1 var(--font-ui); text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 9px 11px; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.boton:hover { border-color: var(--accent); }
+.boton:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.boton[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.boton .ico { width: 14px; height: 14px; flex: none; }
+
+.obra { bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+.obra-caja { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 10px 14px 12px; display: grid; gap: 8px; max-width: 980px; margin: 0 auto; }
+.obra-estado { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; }
+.obra-etapa { font-weight: 700; font-size: 22px; line-height: 1; }
+.obra-mes, .obra-inv { font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+.obra-inv b { color: var(--fg); font-weight: 500; }
+.linea { position: relative; }
+#curva { display: block; width: 100%; height: 34px; overflow: visible; }
+.segmentos { display: flex; gap: 2px; height: 22px; margin-top: 2px; }
+.seg { position: relative; background: var(--track); border-radius: 2px; overflow: hidden; min-width: 0; }
+.seg i { position: absolute; inset: 0 auto 0 0; width: 0; opacity: 0.9; }
+.seg span { position: relative; display: block; padding: 4px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg.lleno span { color: #fff; }
+#tiempo { position: absolute; left: 0; right: 0; bottom: -4px; width: 100%; height: 30px; margin: 0; opacity: 0; cursor: ew-resize; }
+.cursor { position: absolute; bottom: -3px; width: 2px; height: 30px; background: var(--fg); pointer-events: none; }
+.cursor::after { content: ""; position: absolute; left: -5px; bottom: -4px; width: 12px; height: 6px; background: var(--fg); border-radius: 1px; }
+.meses { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 10px; color: var(--muted); padding-top: 4px; }
+
+.panel {
+  position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 74px); right: max(16px, env(safe-area-inset-right, 0px));
+  width: min(340px, calc(100% - 32px)); max-height: calc(100% - 260px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px 14px;
+}
+.panel h2 { margin: 0 0 8px; font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.panel p { margin: 6px 0; color: var(--muted); font-size: 14px; line-height: 1.35; }
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); }
+.fila:first-of-type { border-top: 0; }
+.fila .valor { text-align: right; }
+.chip { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
+.interruptor { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); cursor: pointer; font-size: 15px; }
+.interruptor:first-of-type { border-top: 0; }
+.interruptor input { width: 18px; height: 18px; accent-color: var(--accent); }
+.control { display: grid; gap: 4px; padding: 6px 0; }
+.control input[type="range"] { width: 100%; accent-color: var(--accent); }
+.control input[type="date"] { font: 500 14px var(--font-num); padding: 6px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--fg); }
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla td { padding: 4px 0; border-top: 1px solid var(--line); }
+.tabla td + td { text-align: right; font-family: var(--font-num); font-size: 13px; }
+.tabla tr.total td { font-weight: 700; }
+.nota { font-size: 12.5px; color: var(--muted); }
+.atajos { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 0; }
+.material { padding: 8px 0; border-top: 1px solid var(--line); }
+.material:first-of-type { border-top: 0; }
+.opciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.opcion { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px; cursor: pointer; font-size: 13px; background: var(--bg); color: var(--fg); }
+.opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.opcion:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.opcion:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.muestra { width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.2); flex: none; }
+.tabla th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 10px 0 2px; font-weight: 600; }
+
+.recorrido { bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: flex; justify-content: center; }
+.recorrido-caja { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; width: min(560px, 100%); }
+.recorrido-caja input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.recorrido-lugar { font-family: var(--font-num); font-size: 12px; color: var(--muted); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 150px; }
+
+.aviso { position: fixed; inset: 0; display: grid; place-items: center; z-index: 5; padding: 24px; text-align: center; background: var(--bg); }
+
+body.recorriendo .obra, body.recorriendo .herramientas .boton:not(#btnRecorrido) { display: none; }
+
+@media (max-width: 760px) {
+  .barra { flex-direction: column; align-items: stretch; gap: 8px; }
+  .rotulo-nombre { font-size: 18px; }
+  .herramientas { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; max-width: none; padding-bottom: 2px; scrollbar-width: none; }
+  .herramientas::-webkit-scrollbar { display: none; }
+  .panel { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 212px); left: max(16px, env(safe-area-inset-left, 0px)); width: auto; max-height: calc(100% - 400px); }
+  .obra-etapa { font-size: 19px; }
+  .seg span { font-size: 9.5px; padding: 5px 3px; letter-spacing: 0.02em; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div id="escena" aria-label="Escena 3D de la casa"></div>
+
+<header class="capa-ui barra">
+  <div class="rotulo">
+    <div class="rotulo-nombre">Casa Bali <span class="ronda">ronda 1</span></div>
+    <div class="rotulo-dato"><span class="etiqueta">Programa</span><span class="valor" id="rotuloPrograma">4 hab · 2 plantas</span></div>
+    <div class="rotulo-dato"><span class="etiqueta">Lote</span><span class="valor">12 × 30 m · frente norte</span></div>
+  </div>
+  <nav class="herramientas" aria-label="Herramientas">
+    <button class="boton" id="btnPlay" aria-pressed="false"><svg class="ico" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 2l9 5-9 5z" fill="currentColor"/></svg><span>Construir</span></button>
+    <button class="boton" id="btnExplotar" aria-pressed="false">Explotar</button>
+    <button class="boton" id="btnRayos" aria-pressed="false">Rayos X</button>
+    <button class="boton" id="btnCorte" aria-pressed="false">Corte</button>
+    <button class="boton" id="btnMateriales" aria-pressed="false">Materiales</button>
+    <button class="boton" id="btnSol" aria-pressed="false">Sol</button>
+    <button class="boton" id="btnVista">Vista aérea</button>
+    <button class="boton" id="btnRecorrido" aria-pressed="false">Recorrido</button>
+    <button class="boton" id="btnVecinos" aria-pressed="true">Vecinos</button>
+    <button class="boton" id="btnFicha" aria-pressed="false">Ficha</button>
+    <a class="boton" href="cad.html">Plano CAD</a>
+  </nav>
+</header>
+
+<section class="panel" id="panelRayos" hidden aria-label="Sistemas en rayos X">
+  <h2>Rayos X</h2>
+  <p>Muros, losa y muebles se vuelven translúcidos. Elegí qué instalaciones ver.</p>
+  <div id="listaSistemas"></div>
+</section>
+
+<section class="panel" id="panelCorte" hidden aria-label="Corte horizontal">
+  <h2>Corte horizontal</h2>
+  <div class="control">
+    <label class="etiqueta" for="alturaCorte">Altura del corte</label>
+    <input type="range" id="alturaCorte" min="0.3" max="7.2" step="0.05" value="1.4">
+    <span class="valor" id="alturaCorteValor">1,40 m</span>
+  </div>
+  <div class="atajos">
+    <button class="boton" id="cortePB">Planta baja</button>
+    <button class="boton" id="cortePA">Planta alta</button>
+  </div>
+  <p>A 1,40 m sobre cada piso se ve como una planta de arquitectura.</p>
+</section>
+
+<section class="panel" id="panelMateriales" hidden aria-label="Materiales">
+  <h2>Materiales</h2>
+  <p>Probá combinaciones: el 3D cambia al instante.</p>
+  <div id="listaMateriales"></div>
+</section>
+
+<section class="panel" id="panelSol" hidden aria-label="Sol real">
+  <h2>Sol real en Asunción</h2>
+  <div class="control">
+    <label class="etiqueta" for="fecha">Fecha</label>
+    <input type="date" id="fecha">
+  </div>
+  <div class="control">
+    <label class="etiqueta" for="hora">Hora local (UTC−3)</label>
+    <input type="range" id="hora" min="0" max="24" step="0.0833" value="16.5">
+    <span class="valor" id="horaValor">16:30</span>
+  </div>
+  <div id="solDatos"></div>
+  <p class="nota">Posición calculada con SunCalc para −25,29° / −57,65°. El frente de la casa mira al norte.</p>
+</section>
+
+<section class="panel" id="panelFicha" hidden aria-label="Ficha técnica">
+  <h2>Ficha</h2>
+  <table class="tabla" id="tablaGeneral"></table>
+  <div id="tablasNiveles"></div>
+  <h2 style="margin-top:14px">Cómputo</h2>
+  <table class="tabla" id="tablaComputo"></table>
+  <p class="nota">Todo se calcula del mismo modelo que dibuja el plano. Superficies a eje de muro. Es un diseño conceptual: un profesional matriculado tiene que validarlo y firmarlo.</p>
+</section>
+
+<footer class="capa-ui obra">
+  <div class="obra-caja">
+    <div class="obra-estado">
+      <span class="obra-etapa" id="etapaNombre">Acabados</span>
+      <span class="obra-mes" id="mes">Mes 8 de 8</span>
+      <span class="obra-inv" id="inversion"></span>
+    </div>
+    <div class="linea">
+      <svg id="curva" viewBox="0 0 1000 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="segmentos" id="segmentos"></div>
+      <div class="cursor" id="cursor"></div>
+      <input type="range" id="tiempo" min="0" max="8" step="0.01" value="8" aria-label="Avance de obra en meses">
+    </div>
+    <div class="meses" id="escalaMeses"></div>
+  </div>
+</footer>
+
+<div class="capa-ui recorrido" id="barraRecorrido" hidden>
+  <div class="recorrido-caja">
+    <button class="boton" id="btnPausaRecorrido">Pausa</button>
+    <input type="range" id="avanceRecorrido" min="0" max="1" step="0.001" value="0" aria-label="Avance del recorrido">
+    <span class="recorrido-lugar" id="lugarRecorrido">Vereda</span>
+  </div>
+</div>
+
+<div class="aviso" id="aviso" hidden><p>Este navegador no puede mostrar gráficos 3D (WebGL). Probá con Chrome, Edge, Safari o Firefox actualizados.</p></div>
+
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
+<script src="modelo.js"></script>
+<script src="motor.js"></script>
+<script src="escena.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const CASA = MOTOR.crear(window.MODELO_CASA);
+const $ = (id) => document.getElementById(id);
+const nf = new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 });
+const nf2 = new Intl.NumberFormat('es-PY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ---------------------------------------------------------------------------
+// Escena
+// ---------------------------------------------------------------------------
+const contenedor = $('escena');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  $('aviso').hidden = false;
+  throw e;
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.localClippingEnabled = true;
+contenedor.appendChild(renderer.domElement);
+
+const escena = new THREE.Scene();
+escena.fog = new THREE.Fog('#b9d3e6', 60, 160);
+const camara = new THREE.PerspectiveCamera(45, 1, 0.05, 400);
+
+const casa = ESCENA.construir(THREE, CASA, { estilo: 'obra' });
+escena.add(casa.raiz);
+
+const objetivoCasa = casa.casaAMundo(4.5, 7.5, 2.6);
+const controles = new OrbitControls(camara, renderer.domElement);
+controles.target.copy(objetivoCasa);
+controles.enableDamping = true;
+controles.maxPolarAngle = Math.PI * 0.495;
+controles.minDistance = 3;
+controles.maxDistance = 90;
+camara.position.copy(objetivoCasa).add(new THREE.Vector3(12, 18, -24));
+
+const hemi = new THREE.HemisphereLight('#dbe9f7', '#a59a86', 1.1);
+escena.add(hemi);
+const sol = new THREE.DirectionalLight('#fff4e0', 2.6);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+sol.shadow.camera.left = -24; sol.shadow.camera.right = 24;
+sol.shadow.camera.top = 24; sol.shadow.camera.bottom = -24;
+sol.shadow.camera.near = 1; sol.shadow.camera.far = 120;
+sol.shadow.bias = -0.0004;
+sol.shadow.normalBias = 0.03;
+sol.target.position.copy(casa.aMundo(6, 14, 0));
+escena.add(sol, sol.target);
+
+// Flecha de norte sobre la vereda
+(function () {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1c242c'; g.beginPath(); g.moveTo(64, 8); g.lineTo(96, 100); g.lineTo(64, 80); g.lineTo(32, 100); g.closePath(); g.fill();
+  g.font = '700 30px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffffff'; g.fillText('N', 64, 72);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const flecha = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  flecha.rotation.x = -Math.PI / 2;
+  flecha.position.copy(casa.aMundo(13.6, -1.2, 0.12));
+  escena.add(flecha);
+})();
+
+function ajustarTamano() {
+  const w = contenedor.clientWidth, h = contenedor.clientHeight;
+  renderer.setSize(w, h, false);
+  camara.aspect = w / Math.max(h, 1);
+  camara.updateProjectionMatrix();
+}
+new ResizeObserver(ajustarTamano).observe(contenedor);
+ajustarTamano();
+
+// ---------------------------------------------------------------------------
+// Línea de tiempo: meses ↔ etapas
+// ---------------------------------------------------------------------------
+const ETAPAS = CASA.ETAPAS;
+const MESES = ETAPAS.reduce((s, e) => s + e.meses, 0);
+const TOTAL = CASA.costoM2Ejemplo * Math.round(CASA.computo().superficieCubierta);
+const acumMeses = [0], acumPeso = [0];
+ETAPAS.forEach((e, i) => { acumMeses.push(acumMeses[i] + e.meses); acumPeso.push(acumPeso[i] + e.peso); });
+
+function mesesAT(m) {
+  for (let i = 0; i < ETAPAS.length; i++) {
+    if (m <= acumMeses[i + 1] || i === ETAPAS.length - 1) return i + Math.min(1, Math.max(0, (m - acumMeses[i]) / ETAPAS[i].meses));
+  }
+  return ETAPAS.length;
+}
+function inversionEn(m) {
+  const t = mesesAT(m), i = Math.min(Math.floor(t), ETAPAS.length - 1);
+  return (acumPeso[i] + (t - i) * ETAPAS[i].peso) * TOTAL;
+}
+
+const segs = $('segmentos');
+ETAPAS.forEach((e, i) => {
+  const d = document.createElement('div');
+  d.className = 'seg'; d.style.flex = e.meses;
+  d.innerHTML = `<i style="background:${e.color}"></i><span>${e.nombre}</span>`;
+  segs.appendChild(d);
+});
+$('escalaMeses').innerHTML = Array.from({ length: MESES + 1 }, (_, k) => `<span>${k}</span>`).join('');
+
+function dibujarCurva(m) {
+  const svg = $('curva');
+  const pts = [];
+  for (let k = 0; k <= 80; k++) { const mm = k / 80 * MESES; pts.push([mm / MESES * 1000, 32 - inversionEn(mm) / TOTAL * 30]); }
+  const linea = pts.map((p, k) => (k ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const hasta = pts.filter(p => p[0] <= m / MESES * 1000 + 0.01);
+  const area = hasta.length > 1 ? 'M0 32 ' + hasta.map(p => 'L' + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') + ` L${hasta[hasta.length - 1][0].toFixed(1)} 32 Z` : '';
+  const cx = m / MESES * 1000, cy = 32 - inversionEn(m) / TOTAL * 30;
+  svg.innerHTML =
+    `<line x1="0" y1="32" x2="1000" y2="32" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
+    `<path d="${area}" fill="var(--accent)" opacity="0.14"/>` +
+    `<path d="${linea}" fill="none" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>` +
+    (hasta.length > 1 ? `<path d="${'M' + hasta.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L')}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>` : '') +
+    `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="32" stroke="var(--accent)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+}
+
+let mesActual = MESES;
+function aplicarMes(m) {
+  mesActual = m;
+  const t = mesesAT(m);
+  casa.actualizar(t, explotar);
+  const i = Math.min(Math.floor(t - 1e-9), ETAPAS.length - 1);
+  $('etapaNombre').textContent = m <= 0.001 ? 'Lote vacío' : ETAPAS[Math.max(i, 0)].nombre;
+  $('mes').textContent = m <= 0.001 ? `Mes 0 de ${MESES}` : `Mes ${Math.min(MESES, Math.ceil(m - 1e-6))} de ${MESES}`;
+  $('inversion').innerHTML = `Inversión acumulada <b>US$ ${nf.format(inversionEn(m))}</b> de ${nf.format(TOTAL)} · ejemplo a US$ ${CASA.costoM2Ejemplo}/m²`;
+  [...segs.children].forEach((s, k) => {
+    const f = Math.max(0, Math.min(1, t - k));
+    s.firstChild.style.width = (f * 100) + '%';
+    s.classList.toggle('lleno', f > 0.55);
+  });
+  $('cursor').style.left = `calc(${(m / MESES * 100).toFixed(3)}% - 1px)`;
+  $('tiempo').value = m;
+  dibujarCurva(m);
+}
+
+$('tiempo').addEventListener('input', (e) => { detenerObra(); aplicarMes(parseFloat(e.target.value)); });
+
+// Reproducir la obra completa
+let obraEnCurso = false, inicioObra = 0, mesInicio = 0;
+const DURACION_OBRA = 26000;
+function detenerObra() {
+  obraEnCurso = false;
+  controles.autoRotate = false;
+  $('btnPlay').setAttribute('aria-pressed', 'false');
+  $('btnPlay').querySelector('span').textContent = 'Construir';
+}
+$('btnPlay').addEventListener('click', () => {
+  if (obraEnCurso) { detenerObra(); return; }
+  if (modoRecorrido) salirRecorrido();
+  obraEnCurso = true;
+  mesInicio = mesActual >= MESES - 0.01 ? 0 : mesActual;
+  inicioObra = performance.now() - (mesInicio / MESES) * DURACION_OBRA;
+  controles.autoRotate = true;
+  controles.autoRotateSpeed = 0.55;
+  $('btnPlay').setAttribute('aria-pressed', 'true');
+  $('btnPlay').querySelector('span').textContent = 'Pausa';
+});
+
+// ---------------------------------------------------------------------------
+// Explotar, rayos X, corte, paneles
+// ---------------------------------------------------------------------------
+let explotar = 0, explotarObjetivo = 0;
+$('btnExplotar').addEventListener('click', (e) => {
+  explotarObjetivo = explotarObjetivo ? 0 : 1;
+  e.currentTarget.setAttribute('aria-pressed', String(!!explotarObjetivo));
+});
+
+const paneles = { panelRayos: 'btnRayos', panelCorte: 'btnCorte', panelMateriales: 'btnMateriales', panelSol: 'btnSol', panelFicha: 'btnFicha' };
+function abrirPanel(id) {
+  Object.keys(paneles).forEach((p) => { $(p).hidden = p !== id; });
+  ['Materiales', 'Sol', 'Ficha'].forEach((n) => $('btn' + n).setAttribute('aria-pressed', String(id === 'panel' + n)));
+}
+
+let rayos = false;
+$('btnRayos').addEventListener('click', (e) => {
+  rayos = !rayos;
+  casa.setRayosX(rayos);
+  e.currentTarget.setAttribute('aria-pressed', String(rayos));
+  abrirPanel(rayos ? 'panelRayos' : null);
+  if (rayos && mesActual < acumMeses[3]) aplicarMes(MESES);
+});
+$('listaSistemas').innerHTML = Object.entries(CASA.SISTEMAS).map(([k, s]) => {
+  const largo = CASA.computo().cañerias[k] || 0;
+  return `<label class="interruptor"><span><span class="chip" style="background:${s.color}"></span>${s.nombre} <span class="valor" style="color:var(--muted)">${nf2.format(largo)} m</span></span><input type="checkbox" data-sistema="${k}" checked></label>`;
+}).join('');
+$('listaSistemas').addEventListener('change', (e) => {
+  const k = e.target.dataset.sistema;
+  if (k) { casa.setFiltro(k, e.target.checked); aplicarMes(mesActual); }
+});
+
+let corte = false;
+function setCorte(on) {
+  corte = on;
+  casa.setCorte(on ? parseFloat($('alturaCorte').value) : null);
+  $('btnCorte').setAttribute('aria-pressed', String(on));
+}
+$('btnCorte').addEventListener('click', () => {
+  setCorte(!corte);
+  abrirPanel(corte ? 'panelCorte' : null);
+});
+function alturaDeCorte(v) {
+  $('alturaCorte').value = v;
+  $('alturaCorteValor').textContent = nf2.format(v) + ' m';
+  if (corte) casa.setCorte(v); else setCorte(true);
+}
+$('alturaCorte').addEventListener('input', (e) => alturaDeCorte(parseFloat(e.target.value)));
+$('cortePB').addEventListener('click', () => alturaDeCorte(CASA.listaNiveles[0].cota + 1.25));
+$('cortePA').addEventListener('click', () => alturaDeCorte(CASA.listaNiveles[1].cota + 1.25));
+
+// Materiales elegibles
+$('listaMateriales').innerHTML = Object.entries(CASA.modelo.materiales).map(([k, def]) => `
+  <fieldset class="material" style="border:0;margin:0;padding-inline:0">
+    <legend class="etiqueta">${def.nombre}</legend>
+    <div class="opciones">${Object.entries(def.opciones).map(([o, op]) => `
+      <label class="opcion"><input type="radio" name="mat-${k}" value="${o}" data-slot="${k}" ${def.elegido === o ? 'checked' : ''}><span class="muestra" style="background:${op.color}"></span>${op.nombre}</label>`).join('')}
+    </div>
+  </fieldset>`).join('');
+$('listaMateriales').addEventListener('change', (e) => { if (e.target.dataset.slot) casa.setMaterial(e.target.dataset.slot, e.target.value); });
+$('btnMateriales').addEventListener('click', () => abrirPanel($('panelMateriales').hidden ? 'panelMateriales' : null));
+$('btnVecinos').addEventListener('click', (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+  casa.setVecinos(on);
+});
+
+$('btnSol').addEventListener('click', () => abrirPanel($('panelSol').hidden ? 'panelSol' : null));
+$('btnFicha').addEventListener('click', () => abrirPanel($('panelFicha').hidden ? 'panelFicha' : null));
+
+// Ficha y cómputo
+(function () {
+  const c = CASA.computo();
+  $('rotuloPrograma').textContent = `4 hab · 2 plantas · ${nf2.format(c.superficieCubierta)} m²`;
+  $('tablaGeneral').innerHTML =
+    `<tr class="total"><td>Superficie cubierta</td><td>${nf2.format(c.superficieCubierta)} m²</td></tr>` +
+    CASA.listaNiveles.map(n => `<tr><td>${n.nombre}</td><td>${nf2.format(c.porNivel[n.id])} m²</td></tr>`).join('') +
+    `<tr><td>Terraza descubierta</td><td>${nf2.format(c.terrazas)} m²</td></tr>` +
+    `<tr><td>Lote</td><td>${nf2.format(c.lote)} m²</td></tr>` +
+    `<tr><td>FOS / FOT</td><td>${nf.format(c.fos * 100)} % / ${nf2.format(c.fot)}</td></tr>` +
+    `<tr><td>Retiros frente / fondo</td><td>${nf2.format(c.retiros.frente)} / ${nf2.format(c.retiros.fondo)} m</td></tr>` +
+    `<tr><td>Retiros oeste / este</td><td>${nf2.format(c.retiros.oeste)} / ${nf2.format(c.retiros.este)} m</td></tr>` +
+    `<tr><td>Tragaluces</td><td>${c.tragaluces} · ${nf2.format(c.vidrioCenitalM2)} m²</td></tr>`;
+  $('tablasNiveles').innerHTML = CASA.listaNiveles.map(n => `<table class="tabla"><tr><th colspan="2">${n.nombre}</th></tr>` +
+    CASA.modelo.ambientes.filter(a => a.nivel === n.id).map(a => `<tr><td>${a.nombre}${a.sub ? ' <span style="color:var(--muted)">(' + a.sub + ')</span>' : ''}</td><td>${a.vacio ? 'vacío' : nf2.format(CASA.areaPoligono(a.poli)) + ' m²'}</td></tr>`).join('') + '</table>').join('');
+  const sis = Object.entries(c.cañerias).map(([k, v]) => `<tr><td><span class="chip" style="background:${CASA.SISTEMAS[k].color}"></span>${CASA.SISTEMAS[k].nombre}</td><td>${nf2.format(v)} m</td></tr>`).join('');
+  $('tablaComputo').innerHTML =
+    `<tr><td>Mampostería (neto de vanos)</td><td>${nf2.format(c.muroM2)} m²</td></tr>` +
+    `<tr><td>Losa</td><td>${nf2.format(c.losaM2)} m²</td></tr>` +
+    `<tr><td>Hormigón (losa, columnas, zapatas)</td><td>${nf2.format(c.hormigonM3)} m³</td></tr>` +
+    `<tr><td>Aberturas</td><td>${c.aberturas}</td></tr>` + sis;
+})();
+
+// ---------------------------------------------------------------------------
+// Sol real
+// ---------------------------------------------------------------------------
+const UB = CASA.modelo.ubicacion;
+function hoyAsuncion() {
+  const d = new Date(Date.now() + UB.utc * 3600000);
+  return d.toISOString().slice(0, 10);
+}
+$('fecha').value = hoyAsuncion();
+const cielo = { noche: new THREE.Color('#0f1724'), alba: new THREE.Color('#e9b089'), dia: new THREE.Color('#a8cde9') };
+function fechaUTC(fechaISO, hora) {
+  const [y, mo, d] = fechaISO.split('-').map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, 0, 0, 0) + (hora - UB.utc) * 3600000);
+}
+function hhmm(h) { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); return String(hh % 24).padStart(2, '0') + ':' + String(mm === 60 ? 0 : mm).padStart(2, '0'); }
+function horaLocal(date) { const d = new Date(date.getTime() + UB.utc * 3600000); return d.getUTCHours() + d.getUTCMinutes() / 60; }
+
+function actualizarSol() {
+  const hora = parseFloat($('hora').value);
+  $('horaValor').textContent = hhmm(hora);
+  const fecha = $('fecha').value || hoyAsuncion();
+  const date = fechaUTC(fecha, hora);
+  const p = SunCalc.getPosition(date, UB.lat, UB.lon);
+  const alt = p.altitude, az = p.azimuth;
+  const dir = new THREE.Vector3(-Math.sin(az) * Math.cos(alt), Math.sin(alt), Math.cos(az) * Math.cos(alt));
+  sol.position.copy(sol.target.position).addScaledVector(dir, 60);
+  const dia = THREE.MathUtils.smoothstep(alt, -0.05, 0.25);
+  const crep = THREE.MathUtils.smoothstep(alt, -0.12, 0.02) * (1 - THREE.MathUtils.smoothstep(alt, 0.05, 0.35));
+  sol.intensity = 2.8 * THREE.MathUtils.smoothstep(alt, -0.02, 0.12);
+  sol.color.set('#fff1dc').lerp(new THREE.Color('#ffb070'), crep);
+  hemi.intensity = 0.25 + 0.95 * dia;
+  const fondo = cielo.noche.clone().lerp(cielo.dia, dia).lerp(cielo.alba, crep * 0.8);
+  escena.background = fondo;
+  escena.fog.color.copy(fondo);
+  casa.setNoche(1 - THREE.MathUtils.smoothstep(alt, -0.08, 0.1));
+  const t = SunCalc.getTimes(fechaUTC(fecha, 12), UB.lat, UB.lon);
+  const grados = (r) => nf.format(r * 180 / Math.PI) + '°';
+  const rumbo = ((az * 180 / Math.PI) + 180 + 360) % 360;
+  $('solDatos').innerHTML =
+    `<div class="fila"><span>Altura del sol</span><span class="valor">${grados(alt)}</span></div>` +
+    `<div class="fila"><span>Rumbo (desde el norte)</span><span class="valor">${nf.format(rumbo)}°</span></div>` +
+    `<div class="fila"><span>Salida / puesta</span><span class="valor">${hhmm(horaLocal(t.sunrise))} / ${hhmm(horaLocal(t.sunset))}</span></div>`;
+}
+$('hora').addEventListener('input', actualizarSol);
+$('fecha').addEventListener('input', actualizarSol);
+
+// ---------------------------------------------------------------------------
+// Vistas
+// ---------------------------------------------------------------------------
+const PA0 = CASA.listaNiveles[1].cota;
+const VISTAS = [
+  { id: 'aerea', nombre: 'Vista aérea', pos: new THREE.Vector3(12, 18, -24), obj: objetivoCasa },
+  { id: 'calle', nombre: 'Vista de calle', pos: null, obj: null },
+  { id: 'fondo', nombre: 'Vista de la piscina', pos: new THREE.Vector3(-5, 6, 22), obj: casa.casaAMundo(4.5, 10, 3.0) },
+  { id: 'pb', nombre: 'Planta baja', pos: new THREE.Vector3(0.01, 34, 0.6), obj: casa.casaAMundo(4.5, 9, 0), corte: CASA.listaNiveles[0].cota + 1.25 },
+  { id: 'pa', nombre: 'Planta alta', pos: new THREE.Vector3(0.01, 31, 0.6), obj: casa.casaAMundo(4.5, 8, PA0), corte: PA0 + 1.25 },
+  { id: 'interior', nombre: 'Doble altura', pos: null, obj: null }
+];
+let vista = 0, transicion = null;
+function irAVista(i) {
+  vista = i;
+  const v = VISTAS[i];
+  $('btnVista').textContent = v.nombre;
+  let destino, objetivo;
+  if (v.id === 'calle') { destino = casa.aMundo(3.0, -8.5, 1.65); objetivo = casa.casaAMundo(4.5, 3, 3.2); }
+  else if (v.id === 'interior') { destino = casa.casaAMundo(5.2, 6.9, 1.5); objetivo = casa.casaAMundo(7.6, 5.0, 6.0); }
+  else { objetivo = v.obj.clone(); destino = v.obj.clone().add(v.pos); }
+  if (v.corte) alturaDeCorte(v.corte);
+  else if (corte) setCorte(false);
+  // Adentro se puede mirar hacia arriba (la doble altura y los tragaluces); afuera no se baja del suelo.
+  controles.maxPolarAngle = v.id === 'interior' ? Math.PI * 0.85 : Math.PI * 0.495;
+  transicion = { t0: performance.now(), dur: 1100, p0: camara.position.clone(), p1: destino, o0: controles.target.clone(), o1: objetivo };
+}
+$('btnVista').addEventListener('click', () => irAVista((vista + 1) % VISTAS.length));
+
+// ---------------------------------------------------------------------------
+// Recorrido en primera persona por un camino fijo
+// ---------------------------------------------------------------------------
+// Coordenadas de lote; la altura del ojo sigue al piso de cada planta y a la escalera.
+const OJO_PB = CASA.listaNiveles[0].cota + 1.6, OJO_PA = PA0 + 1.6, OJO_EXT = 1.6;
+const CAMINO = [
+  [5.8, -6.5, OJO_EXT, 'Vereda'], [5.8, 0.3, OJO_EXT, 'Portón'], [5.8, 4.3, OJO_EXT, 'Espejo de agua'], [5.8, 5.4, OJO_PB, 'Puerta pivotante'],
+  [5.9, 7.0, OJO_PB, 'Hall de entrada'], [5.6, 10.2, OJO_PB, 'Galería y jardín interior'], [6.0, 13.0, OJO_PB, 'Living-comedor'],
+  [4.4, 14.6, OJO_PB, 'Cocina'], [6.4, 16.6, OJO_PB, 'Living'], [6.4, 19.4, OJO_PB, 'Corrediza al jardín'], [6.4, 21.0, OJO_PB, 'Galería'],
+  [6.6, 22.5, OJO_EXT, 'Piscina'], [8.6, 21.0, OJO_PB, 'Galería'], [8.6, 19.6, OJO_PB, 'Living'], [8.4, 16.5, OJO_PB, 'Living'],
+  [6.4, 13.2, OJO_PB, 'Comedor'], [6.2, 9.4, OJO_PB, 'Galería'], [8.4, 7.4, OJO_PB, 'Hall'], [9.375, 7.6, OJO_PB, 'Escalera'],
+  [9.375, 12.5, OJO_PA, 'Escalera'], [9.0, 13.2, OJO_PA, 'Pasillo'], [7.8, 13.3, OJO_PA, 'Pasillo'], [7.8, 14.4, OJO_PA, 'Habitación principal'],
+  [8.4, 16.4, OJO_PA, 'Habitación principal'], [8.5, 18.9, OJO_PA, 'Terraza']
+].map(([x, y, h, n]) => ({ p: casa.aMundo(x, y, h), n }));
+const largos = [0];
+for (let i = 1; i < CAMINO.length; i++) largos.push(largos[i - 1] + CAMINO[i].p.distanceTo(CAMINO[i - 1].p));
+const LARGO = largos[largos.length - 1];
+function puntoEn(s) {
+  s = Math.max(0, Math.min(LARGO, s));
+  let i = 1; while (i < largos.length - 1 && largos[i] < s) i++;
+  const f = (s - largos[i - 1]) / Math.max(largos[i] - largos[i - 1], 1e-6);
+  return { p: CAMINO[i - 1].p.clone().lerp(CAMINO[i].p, f), n: CAMINO[i].n };
+}
+let modoRecorrido = false, recPausa = false, recS = 0, estadoPrevio = null;
+const VEL = 1.25;
+function entrarRecorrido() {
+  detenerObra();
+  modoRecorrido = true; recPausa = false; recS = 0;
+  estadoPrevio = { pos: camara.position.clone(), obj: controles.target.clone(), corte, explotar: explotarObjetivo, rayos };
+  if (corte) setCorte(false);
+  if (rayos) $('btnRayos').click();
+  explotarObjetivo = 0; explotar = 0; $('btnExplotar').setAttribute('aria-pressed', 'false');
+  abrirPanel(null);
+  aplicarMes(MESES);
+  controles.enabled = false;
+  camara.fov = 68; camara.updateProjectionMatrix();
+  document.body.classList.add('recorriendo');
+  $('barraRecorrido').hidden = false;
+  $('btnRecorrido').setAttribute('aria-pressed', 'true');
+  $('btnPausaRecorrido').textContent = 'Pausa';
+}
+function salirRecorrido() {
+  modoRecorrido = false;
+  controles.enabled = true;
+  camara.fov = 45; camara.updateProjectionMatrix();
+  document.body.classList.remove('recorriendo');
+  $('barraRecorrido').hidden = true;
+  $('btnRecorrido').setAttribute('aria-pressed', 'false');
+  if (estadoPrevio) { camara.position.copy(estadoPrevio.pos); controles.target.copy(estadoPrevio.obj); }
+}
+$('btnRecorrido').addEventListener('click', () => (modoRecorrido ? salirRecorrido() : entrarRecorrido()));
+$('btnPausaRecorrido').addEventListener('click', () => {
+  if (recS >= LARGO) recS = 0;
+  recPausa = !recPausa;
+  $('btnPausaRecorrido').textContent = recPausa ? 'Seguir' : 'Pausa';
+});
+$('avanceRecorrido').addEventListener('input', (e) => { recS = parseFloat(e.target.value) * LARGO; });
+
+function actualizarRecorrido(dt) {
+  if (!recPausa) recS = Math.min(LARGO, recS + dt * VEL);
+  if (recS >= LARGO && !recPausa) { recPausa = true; $('btnPausaRecorrido').textContent = 'Repetir'; }
+  const aqui = puntoEn(recS), adelante = puntoEn(recS + 1.8).p;
+  const finalF = THREE.MathUtils.smoothstep(recS, LARGO - 4, LARGO);
+  const mirar = adelante.clone().lerp(casa.aMundo(5.0, 26.0, 1.2), finalF);
+  if (aqui.p.distanceTo(mirar) < 0.05) mirar.add(new THREE.Vector3(0, 0, 1));
+  camara.position.copy(aqui.p);
+  camara.lookAt(mirar);
+  $('avanceRecorrido').value = recS / LARGO;
+  $('lugarRecorrido').textContent = aqui.n;
+}
+
+// ---------------------------------------------------------------------------
+// Bucle
+// ---------------------------------------------------------------------------
+let ultimo = performance.now();
+function cuadro(ahora) {
+  const dt = Math.min(0.05, (ahora - ultimo) / 1000);
+  ultimo = ahora;
+  if (obraEnCurso) {
+    const m = Math.min(MESES, (ahora - inicioObra) / DURACION_OBRA * MESES);
+    aplicarMes(m);
+    if (m >= MESES) detenerObra();
+  }
+  if (Math.abs(explotar - explotarObjetivo) > 0.001) {
+    explotar += (explotarObjetivo - explotar) * Math.min(1, dt * 4);
+    if (Math.abs(explotar - explotarObjetivo) < 0.002) explotar = explotarObjetivo;
+    casa.actualizar(mesesAT(mesActual), explotar);
+  }
+  if (transicion) {
+    const f = Math.min(1, (ahora - transicion.t0) / transicion.dur), e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    camara.position.lerpVectors(transicion.p0, transicion.p1, e);
+    controles.target.lerpVectors(transicion.o0, transicion.o1, e);
+    if (f >= 1) transicion = null;
+  }
+  if (modoRecorrido) actualizarRecorrido(dt);
+  else controles.update(dt);
+  renderer.render(escena, camara);
+  requestAnimationFrame(cuadro);
+}
+
+actualizarSol();
+aplicarMes(MESES);
+requestAnimationFrame(cuadro);
+window.__casa = { casa, aplicarMes, irAVista, entrarRecorrido, setCorte, camara, controles, renderer, THREE, escena };
+</script>
+<!-- artifact:fin -->
+</body>
+</html>
