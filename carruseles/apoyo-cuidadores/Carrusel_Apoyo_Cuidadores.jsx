@@ -1,11 +1,12 @@
 ﻿#target illustrator
-// Carrusel "Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores" — 7 placas con la línea gráfica de la skill
+// Carrusel "Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores" — 7 placas de 1080×1350 con la línea gráfica de la skill
 // fead-infografias (tarjetas blancas, emojis Apple, badge con arco, Gotham), con el azul institucional #2153D0 en lugar del azul oscuro.
 app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
 // ===== CONFIG: carpeta de salida, nombre del .ai, carpeta de emojis Apple (slug.png) y encabezado de marca =====
 var DIR = 'C:/Users/raulm/Claude/UCP/Carrusel-cuidadores/', OUT = 'Carrusel_Apoyo_Cuidadores.ai';
 var EM = 'C:/Users/raulm/.claude/skills/fead-infografias/assets/emojis-apple/', ERR = [];
 var HP = 'UCP', HT = 'Consultorio Psicológico Universitario';
+var AW = 1080, AH = 1350, MG = 60, CW = AW-2*MG, MX = AW/2;   // mesa, margen lateral, ancho útil y centro
 function C(h){var c=new RGBColor();c.red=parseInt(h.substr(0,2),16);c.green=parseInt(h.substr(2,2),16);c.blue=parseInt(h.substr(4,2),16);return c;}
 var NAVY=C('2153D0'),SHD=C('1B365D'),RED=C('E31B2D'),ORG=C('FF8A3D'),BG=C('F2F3F7'),WHITE=C('FFFFFF'),INK=C('1C2536'),GRAY=C('646C7C'),
     LINE=C('E8EBF1'),TRACK=C('ECEEF3'),SKY=C('C9D7F7'),RULE=C('4A72DA'),TBLUE=NAVY;
@@ -50,18 +51,21 @@ function GC(){var g=new GradientColor();g.gradient=GR;return g;}
 // ---------- texto (**así** marca un tramo en negrita y color) ----------
 function sty(t,f,sz,c,ld,tr){var a=t.textRange.characterAttributes;a.textFont=f;a.size=sz;a.fillColor=c;if(ld){a.autoLeading=false;a.leading=ld;}a.tracking=tr||0;}
 function mw(s,f,sz,tr){TMP.contents=s;sty(TMP,f,sz,INK,0,tr);return TMP.width;}
-function wrap(s,f,sz,w,tr){if(!w)return s;var o=[],ps=s.split('\n');for(var i=0;i<ps.length;i++){var ws=ps[i].split(' '),cur='';
-  for(var j=0;j<ws.length;j++){var t=cur?cur+' '+ws[j]:ws[j];if(cur&&mw(t,f,sz,tr)>w){o.push(cur);cur=ws[j];}else cur=t;}o.push(cur);}return o.join('\r');}
-function T(P,s,x,y,o){var hl=[],p=s,k,j;
-  if(s.indexOf('**')>=0){var a=s.split('**');p='';for(k=0;k<a.length;k++){if(k%2)hl.push([p.length,p.length+a[k].length]);p+=a[k];}}
-  var t=P.textFrames.add();t.contents=wrap(p,o.f,o.size,o.w,o.tr);sty(t,o.f,o.size,o.c,o.lead||Math.round(o.size*1.3),o.tr);
+function mwm(s,f,hf,sz,tr,b){var a=s.split('**'),w=0;for(var k=0;k<a.length;k++)if(a[k])w+=mw(a[k],(k%2==1)!=b?hf:f,sz,tr);return w;}
+function flip(s,b){return (s.split('**').length-1)%2?!b:b;}
+function wrap(s,f,sz,w,tr,hf){var o=[],ps=s.split('\n'),b=false;hf=hf||f;   // mide los tramos **resaltados** con su fuente
+  for(var i=0;i<ps.length;i++){var ws=ps[i].split(' '),cur='',cb=b;
+    for(var j=0;j<ws.length;j++){var t=cur?cur+' '+ws[j]:ws[j];if(cur&&mwm(t,f,hf,sz,tr,cb)>w){o.push(cur);cb=flip(cur,cb);cur=ws[j];}else cur=t;}
+    o.push(cur);b=flip(cur,cb);}return o.join('\r');}
+function T(P,s,x,y,o){var hl=[],p='',k,j,a=(o.w?wrap(s,o.f,o.size,o.w,o.tr,o.hf||F.b):s).split('**');
+  for(k=0;k<a.length;k++){if(k%2)hl.push([p.length,p.length+a[k].length]);p+=a[k];}
+  var t=P.textFrames.add();t.contents=p;sty(t,o.f,o.size,o.c,o.lead||Math.round(o.size*1.3),o.tr);
   if(hl.length){var cs=t.textRange.characters,s2=t.contents,sk=cs.length!=s2.length;
     for(k=0;k<hl.length;k++)for(j=hl[k][0];j<hl[k][1];j++){var q=sk?j-(s2.substr(0,j).split('\r').length-1):j,ca=cs[q].characterAttributes;
       ca.textFont=o.hf||F.b;ca.fillColor=o.hc||NAVY;}}
   t.textRange.paragraphAttributes.justification=o.just=='c'?Justification.CENTER:(o.just=='r'?Justification.RIGHT:Justification.LEFT);
   t.top=Y(y);t.left=o.just=='c'?X(x)-t.width/2:(o.just=='r'?X(x)-t.width:X(x));return t;}
 function vc(t,cy){t.top=Y(cy-t.height/2);}
-function center(g,y,h){var b=g.geometricBounds,gh=b[1]-b[3];g.translate(0,Y(y+(h-gh)/2)-b[1]);}
 function pill(P,s,x,y,o){var sz=o.size||14,h=o.h||Math.round(sz*2.2),px=o.px||14,ew=o.e?sz*1.7:0;
   var t=T(P,s,0,0,{f:o.f||F.s,size:sz,c:o.c||WHITE,tr:o.tr}),w=t.width+2*px+ew,x0=o.anchor=='c'?x-w/2:(o.anchor=='r'?x-w:x);
   if(o.sh){var sd=rr(P,x0+4,y+6,w-8,h-2,h/2,SHD);sd.opacity=14;blur(sd,10);sd.zOrder(ZOrderMethod.SENDBACKWARD);}
@@ -70,124 +74,133 @@ function pill(P,s,x,y,o){var sz=o.size||14,h=o.h||Math.round(sz*2.2),px=o.px||14
   t.left=X(x0+px+ew);vc(t,y+h/2);return {w:w,h:h,x:x0};}
 
 // ---------- estructura común ----------
-function brand(P){var p=pill(P,HP,50,36,{f:F.b,size:17,bg:NAVY,c:WHITE,h:40,px:18});
-  var t=T(P,HT,50+p.w+14,0,{f:F.s,size:17,c:GRAY});vc(t,56);}
-function header(P,d){brand(P);if(!d.title)return 104;var y=100,ts=d.ts||46;
-  if(d.te){circ(P,600,y+34,34,TH.navy.t);E(P,d.te,600,y+34,46);y+=86;}
-  var t=T(P,d.title,600,y,{f:F.b,size:ts,c:TBLUE,just:'c',w:d.tw||1040,lead:Math.round(ts*1.1),tr:-12});
-  y+=t.height+16;rr(P,568,y,64,7,0,RED);y+=7;
-  if(d.sub){y+=18;var ss=d.ss||23,s=T(P,d.sub,600,y,{f:F.r,size:ss,c:GRAY,just:'c',w:d.sw||940,lead:Math.round(ss*1.3)});y+=s.height;}
-  return y+32;}
-function footer(P,d){if(!d.foot)return 862;var x=90,w=1020;
-  var t=T(P,d.foot,x+104,0,{f:F.r,size:22,c:INK,w:w-140,lead:29});
-  var h=Math.max(94,t.height+44),y=900-34-h;card(P,x,y,w,h,Math.min(30,h/2));
-  circ(P,x+54,y+h/2,31,TH.navy.t);E(P,d.fe||'light-bulb',x+54,y+h/2,42);
-  vc(t,y+h/2);t.zOrder(ZOrderMethod.BRINGTOFRONT);return y-26;}
+function brand(P){var p=pill(P,HP,MG,50,{f:F.b,size:20,bg:NAVY,c:WHITE,h:46,px:20});
+  var t=T(P,HT,MG+p.w+16,0,{f:F.s,size:20,c:GRAY});vc(t,73);}
+function header(P,d){brand(P);if(!d.title)return 120;var y=130,ts=d.ts||56;
+  if(d.te){circ(P,MX,y+42,42,TH.navy.t);E(P,d.te,MX,y+42,58);y+=108;}
+  var t=T(P,d.title,MX,y,{f:F.b,size:ts,c:TBLUE,just:'c',w:d.tw||CW,lead:Math.round(ts*1.1),tr:-12});
+  y+=t.height+20;rr(P,MX-36,y,72,8,0,RED);y+=8;
+  if(d.sub){y+=22;var ss=d.ss||28,s=T(P,d.sub,MX,y,{f:F.r,size:ss,c:GRAY,just:'c',w:d.sw||900,lead:Math.round(ss*1.3)});y+=s.height;}
+  return y+40;}
+function footer(P,d){if(!d.foot)return AH-50;var x=MG,w=CW;
+  var t=T(P,d.foot,x+112,0,{f:F.r,size:26,c:INK,w:w-150,lead:34});
+  var h=Math.max(112,t.height+52),y=AH-50-h;card(P,x,y,w,h,Math.min(32,h/2));
+  circ(P,x+58,y+h/2,36,TH.navy.t);E(P,d.fe||'light-bulb',x+58,y+h/2,48);
+  vc(t,y+h/2);t.zOrder(ZOrderMethod.BRINGTOFRONT);return y-30;}
 function badge(P,cx,cy,R,e,label,o){o=o||{};ccard(P,cx,cy,R);var sw=R>140?12:8,ri=R-(R>140?26:18),h=o.h||38;
   circ(P,cx,cy,ri,null,TRACK,sw);arc(P,cx,cy,ri,135,372,sw,GC());
   var ka=372*Math.PI/180;circ(P,cx+ri*Math.cos(ka),cy+ri*Math.sin(ka),sw,WHITE,ORG,sw/2);
   E(P,e,cx,cy-(label?h*0.25:0),R*(o.es||0.95));
   if(label)pill(P,label,cx,cy+R-h/2,{f:o.f||F.s,size:o.size||16,bg:o.bg||NAVY,c:WHITE,h:h,px:o.px||18,anchor:'c',sh:true,e:o.e});}
 
-// ---------- placas ----------
-function portada(P,d,T0,B0){var R=d.R||200,cx=870,cy=T0+(B0-T0)/2-10;
-  badge(P,cx,cy,R,d.ce,d.cl,{bg:RED,f:F.b,size:22,h:56,px:28,es:0.72});
-  sat(P,cx-R+6,cy-R+46,48,'heart-hands');sat(P,cx+R-10,cy+R-76,44,'people-hugging');
-  var g=P.groupItems.add(),ts=d.ts||62,t=T(g,d.h1,50,0,{f:F.b,size:ts,c:TBLUE,w:570,lead:Math.round(ts*1.06),tr:-15}),y=t.height+28;
-  rr(g,50,y,72,7,0,RED);y+=7+30;
-  var p=T(g,d.proj,50,y,{f:F.s,size:27,c:INK,w:540,lead:34});y+=p.height+18;
-  T(g,d.ini,50,y,{f:F.r,size:20,c:GRAY,w:520,lead:27});center(g,T0,B0-T0);}
+// ---------- placas (cada una arma su bloque y lo centra en vertical entre T0 y B0) ----------
+function portada(P,d,T0,B0){var R=d.R||210,ph=60,gap=78,g=P.groupItems.add(),ts=d.ts||70;
+  var t=T(g,d.h1,MX,0,{f:F.b,size:ts,c:TBLUE,just:'c',w:CW,lead:Math.round(ts*1.06),tr:-15}),y=t.height+30;
+  rr(g,MX-40,y,80,8,0,RED);y+=8+34;
+  var p=T(g,d.proj,MX,y,{f:F.s,size:33,c:INK,just:'c',w:820,lead:42});y+=p.height+20;
+  y+=T(g,d.ini,MX,y,{f:F.r,size:25,c:GRAY,just:'c',w:760,lead:33}).height;
+  var cy=T0+(B0-T0-(2*R+ph/2+gap+y))/2+R;
+  badge(P,MX,cy,R,d.ce,d.cl,{bg:RED,f:F.b,size:26,h:ph,px:32,es:0.72});
+  sat(P,MX-R-10,cy-R+70,54,'heart-hands');sat(P,MX+R+6,cy+R-90,50,'people-hugging');
+  g.translate(0,-(cy+R+ph/2+gap));}
 
-function espacio(P,d,T0,B0){var R=d.R||150,cx=212,x=430,w=720,pad=46,tw=w-2*pad,g=P.groupItems.add();
-  var a=T(g,d.txt,x+pad,0,{f:F.r,size:24,c:INK,w:tw,lead:34}),y=a.height+28;
-  line(g,[[x+pad,y],[x+w-pad,y]],LINE,1.6);y+=28;
-  var u=T(g,d.cierre,x+pad+84,y,{f:F.s,size:22,c:NAVY,w:tw-84,lead:29}),uh=Math.max(u.height,64);vc(u,y+uh/2);
-  circ(g,x+pad+32,y+uh/2,32,TH.navy.t);E(g,d.ee,x+pad+32,y+uh/2,42);y+=uh;
-  var h=y+2*pad,y0=T0+(B0-T0-h)/2;g.translate(0,-(y0+pad));card(P,x,y0,w,h,30);g.zOrder(ZOrderMethod.BRINGTOFRONT);
-  badge(P,cx,T0+(B0-T0)/2-8,R,d.ce,d.cl,{e:d.cle,size:19,h:46,px:20,es:0.8});}
+function espacio(P,d,T0,B0){var R=d.R||140,ph=50,gap=56,x=MG,w=CW,pad=54,tw=w-2*pad,g=P.groupItems.add();
+  var a=T(g,d.txt,x+pad,0,{f:F.r,size:28,c:INK,w:tw,lead:39}),y=a.height+32;
+  line(g,[[x+pad,y],[x+w-pad,y]],LINE,1.8);y+=32;
+  var u=T(g,d.cierre,x+pad+96,y,{f:F.s,size:26,c:NAVY,w:tw-96,lead:34}),uh=Math.max(u.height,76);vc(u,y+uh/2);
+  circ(g,x+pad+38,y+uh/2,38,TH.navy.t);E(g,d.ee,x+pad+38,y+uh/2,50);y+=uh;
+  var ch=y+2*pad,cy=T0+(B0-T0-(2*R+ph/2+gap+ch))/2+R,y0=cy+R+ph/2+gap;
+  badge(P,MX,cy,R,d.ce,d.cl,{e:d.cle,size:22,h:ph,px:22,es:0.8});
+  g.translate(0,-(y0+pad));card(P,x,y0,w,ch,32);g.zOrder(ZOrderMethod.BRINGTOFRONT);}
 
-function gridV(P,x,y,w,h,c,i){card(P,x,y,w,h,30);var g=P.groupItems.add(),cx=x+w/2;circ(g,cx,y+54,52,TINT[i%2]);E(g,c.e,cx,y+54,70);
-  var t=T(g,c.t,cx,y+128,{f:F.b,size:c.ts||27,c:NAVY,just:'c',w:w-40,lead:Math.round((c.ts||27)*1.15)});
-  if(c.d)T(g,c.d,cx,y+128+t.height+10,{f:F.r,size:21,c:GRAY,just:'c',w:w-50,lead:27});center(g,y,h);}
-function grid(P,d,T0,B0){var cs=d.cards,cols=d.cols,rows=Math.ceil(cs.length/cols),gap=d.gap||22;
-  var cw=(1100-(cols-1)*gap)/cols,ch=Math.min((B0-T0-(rows-1)*gap)/rows,d.maxH||9999),tot=rows*ch+(rows-1)*gap,oy=T0+(B0-T0-tot)/2;
-  for(var i=0;i<cs.length;i++){if(d.cts&&!cs[i].ts)cs[i].ts=d.cts;gridV(P,50+(i%cols)*(cw+gap),oy+Math.floor(i/cols)*(ch+gap),cw,ch,cs[i],i);}}
+function gridV(P,x,y,w,h,c,i){card(P,x,y,w,h,32);var g=P.groupItems.add(),cx=x+w/2,ts=c.ts||32;circ(g,cx,y+62,60,TINT[i%2]);E(g,c.e,cx,y+62,82);
+  var t=T(g,c.t,cx,y+150,{f:F.b,size:ts,c:NAVY,just:'c',w:w-44,lead:Math.round(ts*1.15)});
+  if(c.d)T(g,c.d,cx,y+150+t.height+10,{f:F.r,size:25,c:GRAY,just:'c',w:w-54,lead:32});
+  var b=g.geometricBounds;g.translate(0,Y(y+(h-(b[1]-b[3]))/2)-b[1]);}
+function gridR(P,x,y,w,h,c,i){card(P,x,y,w,h,32);var g=P.groupItems.add(),tx=x+176,tw=w-206;
+  var t=T(g,c.t,tx,0,{f:F.b,size:c.ts||32,c:NAVY,w:tw,lead:38}),bh=t.height;
+  if(c.d){var u=T(g,c.d,tx,bh+8,{f:F.r,size:26,c:GRAY,w:tw,lead:34});bh+=8+u.height;}
+  g.translate(0,-(y+(h-bh)/2));circ(P,x+92,y+h/2,60,TINT[i%2]);E(P,c.e,x+92,y+h/2,80);}
+function grid(P,d,T0,B0){var cs=d.cards,cols=d.cols,rows=Math.ceil(cs.length/cols),gap=d.gap||24,fn=d.card=='r'?gridR:gridV;
+  var cw=(CW-(cols-1)*gap)/cols,ch=Math.min((B0-T0-(rows-1)*gap)/rows,d.maxH||9999),tot=rows*ch+(rows-1)*gap,oy=T0+(B0-T0-tot)/2;
+  for(var i=0;i<cs.length;i++){if(d.cts&&!cs[i].ts)cs[i].ts=d.cts;fn(P,MG+(i%cols)*(cw+gap),oy+Math.floor(i/cols)*(ch+gap),cw,ch,cs[i],i);}}
 
-function columns(P,d,T0,B0){var cs=d.cols,n=cs.length,gap=26,w=(1100-(n-1)*gap)/n,H=B0-T0,x=50,mr=0,hh=76,tts=[],i,j;
-  for(i=0;i<n;i++){mr=Math.max(mr,cs[i].rows.length);var t=T(P,cs[i].t,0,0,{f:F.b,size:30,c:WHITE});tts.push(t);hh=Math.max(hh,t.height+36);}
-  var rowH=Math.min((H-hh-48)/mr,d.maxRow||112),cr=30;
-  for(i=0;i<n;i++){var c=cs[i],th=TH[c.c||'navy'],hy=T0+12+hh/2;
-    card(P,x,T0,w,H,30);rr(P,x+12,T0+12,w-24,hh,22,th.m);circ(P,x+58,hy,28,WHITE);E(P,c.e,x+58,hy,38);
-    tts[i].zOrder(ZOrderMethod.BRINGTOFRONT);tts[i].left=X(x+102);vc(tts[i],hy);
-    var ry=T0+24+hh+(H-hh-48-rowH*c.rows.length)/2;   // filas centradas en vertical
-    for(j=0;j<c.rows.length;j++){var r=c.rows[j],cy=ry+rowH*(j+0.5),cx=x+32+cr;
-      if(j>0)line(P,[[x+30,ry+rowH*j],[x+w-30,ry+rowH*j]],LINE,1.4);
+function listas(P,d,T0,B0){var cs=d.cols,n=cs.length,gap=30,hh=88,nr=0,tot=(n-1)*gap,i,j;for(i=0;i<n;i++)nr+=cs[i].rows.length;
+  var rowH=Math.min((B0-T0-(n-1)*gap-n*(hh+48))/nr,d.maxRow||92),y;for(i=0;i<n;i++)tot+=hh+48+cs[i].rows.length*rowH;
+  y=T0+(B0-T0-tot)/2;
+  for(i=0;i<n;i++){var c=cs[i],th=TH[c.c||'navy'],h=hh+48+c.rows.length*rowH,hy=y+14+hh/2,x=MG,w=CW,cr=32,ry=y+14+hh+17;
+    card(P,x,y,w,h,32);rr(P,x+14,y+14,w-28,hh,24,th.m);circ(P,x+66,hy,32,WHITE);E(P,c.e,x+66,hy,44);
+    var t=T(P,c.t,x+118,0,{f:F.b,size:34,c:WHITE});vc(t,hy);
+    for(j=0;j<c.rows.length;j++){var r=c.rows[j],cy=ry+rowH*(j+0.5),cx=x+40+cr;
+      if(j>0)line(P,[[x+36,ry+rowH*j],[x+w-36,ry+rowH*j]],LINE,1.6);
       circ(P,cx,cy,cr,th.t);E(P,r[0],cx,cy,cr*1.3);
-      var u=T(P,r[1],cx+cr+22,0,{f:F.s,size:d.rt||25,c:INK,w:w-(cx+cr+22-x)-30,lead:31});vc(u,cy);}
-    x+=w+gap;}}
+      var u=T(P,r[1],cx+cr+26,0,{f:F.s,size:d.rt||29,c:INK,w:w-(cx+cr+26-x)-36,lead:36});vc(u,cy);}
+    y+=h+gap;}}
 
-function fecha(P,d,T0,B0){var w=360,h=390,gap=72,tw=500,x0=600-(w+gap+tw)/2,y0=T0+(B0-T0-h)/2;
-  card(P,x0,y0,w,h,34);rr(P,x0,y0,w,110,34,RED);rr(P,x0,y0+72,w,38,0,RED);
-  var m=T(P,d.mes,x0+w/2,0,{f:F.b,size:34,c:WHITE,just:'c',tr:120});vc(m,y0+56);
-  rr(P,x0+84,y0-20,18,44,9,NAVY);rr(P,x0+w-102,y0-20,18,44,9,NAVY);
-  var n=T(P,d.dia,x0+w/2,0,{f:F.b,size:190,c:TBLUE,just:'c',tr:-30});vc(n,y0+110+(h-110)/2+6);
-  sat(P,x0+w-6,y0+h-6,44,'alarm-clock');
-  var g=P.groupItems.add(),x=x0+w+gap,a=T(g,d.pre,x,0,{f:F.s,size:26,c:GRAY,w:tw}),y=a.height+10;
-  var b=T(g,d.fecha,x,y,{f:F.b,size:54,c:RED,tr:-10,w:tw});y+=b.height+24;
-  var c=T(g,d.txt,x,y,{f:F.r,size:23,c:INK,w:tw,lead:31});y+=c.height+32;
-  pill(g,d.cta,x,y,{f:F.b,size:22,bg:RED,c:WHITE,h:58,px:28,sh:true});center(g,y0,h);}
+function fecha(P,d,T0,B0){var w=440,h=460,band=130,g=P.groupItems.add();
+  var a=T(g,d.pre,MX,0,{f:F.s,size:34,c:GRAY,just:'c'}),cal=a.height+54,y=cal+h+56;   // el calendario va entre el rótulo y el texto
+  var c=T(g,d.txt,MX,y,{f:F.r,size:28,c:INK,just:'c',w:860,lead:38});y+=c.height+40;
+  pill(g,d.cta,MX,y,{f:F.b,size:27,bg:RED,c:WHITE,h:68,px:34,anchor:'c',sh:true});y+=68;
+  var top=T0+(B0-T0-y)/2,x0=MX-w/2,y0=top+cal;g.translate(0,-top);
+  card(P,x0,y0,w,h,40);rr(P,x0,y0,w,band,40,NAVY);rr(P,x0,y0+band-44,w,44,0,NAVY);
+  var m=T(P,d.mes,MX,0,{f:F.b,size:40,c:WHITE,just:'c',tr:120});vc(m,y0+band/2+4);
+  rr(P,x0+100,y0-24,22,52,11,RED);rr(P,x0+w-122,y0-24,22,52,11,RED);
+  var n=T(P,d.dia,MX,0,{f:F.b,size:230,c:RED,just:'c',tr:-30});vc(n,y0+band+(h-band)/2+8);
+  sat(P,x0+w-4,y0+h-8,52,'alarm-clock');}
 
-function cta(P,d,T0,B0){var x=50,y=T0,w=1100,h=862-T0,top=y+24,ah=h-190,cx=890,cy=top+ah/2;
-  card(P,x,y,w,h,36,NAVY);
-  badge(P,cx,cy,d.R||170,d.ce,null,{es:0.82});sat(P,cx+150,cy-150,46,'graduation-cap');sat(P,cx-150,cy+150,42,'heart-hands');
-  var g=P.groupItems.add(),t=T(g,d.h1,110,0,{f:F.b,size:50,c:WHITE,w:570,lead:55,tr:-15}),yy=t.height+26;
-  rr(g,110,yy,72,7,0,RED);yy+=7+30;
-  var b=T(g,d.body,110,yy,{f:F.r,size:22,c:WHITE,w:560,lead:31,hc:WHITE});yy+=b.height+34;
-  pill(g,d.cta,110,yy,{f:F.b,size:21,bg:WHITE,c:NAVY,h:58,px:26,e:'writing-hand',sh:true});center(g,top,ah);
-  var ly=y+h-138;line(P,[[110,ly],[x+w-60,ly]],RULE,1.4);
-  var s1=T(P,d.s1,110,ly+28,{f:F.b,size:22,c:WHITE});T(P,d.s2,110,ly+28+s1.height+6,{f:F.r,size:19,c:SKY});}
+function cta(P,d,T0,B0){var x=MG,y=T0+10,w=CW,h=AH-50-y,R=d.R||165,sh=150,ts=d.ts||54,g=P.groupItems.add();
+  var t=T(g,d.h1,MX,0,{f:F.b,size:ts,c:WHITE,just:'c',w:w-80,lead:Math.round(ts*1.1),tr:-15}),yy=t.height+28;
+  rr(g,MX-40,yy,80,8,0,RED);yy+=8+32;
+  var b=T(g,d.body,MX,yy,{f:F.r,size:28,c:WHITE,just:'c',w:820,lead:38,hc:WHITE});yy+=b.height+44;
+  pill(g,d.cta,MX,yy,{f:F.b,size:27,bg:WHITE,c:NAVY,h:70,px:32,e:'writing-hand',anchor:'c',sh:true});yy+=70;
+  var cy=y+(h-sh-(2*R+60+yy))/2+R;   // badge + texto centrados sobre la firma
+  card(P,x,y,w,h,40,NAVY);badge(P,MX,cy,R,d.ce,null,{es:0.82});
+  sat(P,MX+R+2,cy-R+50,52,'graduation-cap');sat(P,MX-R-2,cy+R-60,48,'heart-hands');
+  g.translate(0,-(cy+R+60));g.zOrder(ZOrderMethod.BRINGTOFRONT);
+  var ly=y+h-sh;line(P,[[x+70,ly],[x+w-70,ly]],RULE,1.6);
+  var s1=T(P,d.s1,MX,ly+36,{f:F.b,size:27,c:WHITE,just:'c'});T(P,d.s2,MX,ly+36+s1.height+8,{f:F.r,size:23,c:SKY,just:'c'});}
 
 // ---------- contenido ----------
 var DATA=[
 {name:'01 Portada',type:'portada',ce:'blue-heart',cl:'¡Convocatoria abierta!',
- h1:'Cuidar a otros también merece acompañamiento',
+ h1:'Cuidar a otros también\nmerece acompañamiento',
  proj:'Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores',
  ini:'Una iniciativa del Consultorio Psicológico Universitario de la Universidad Central.'},
 {name:'02 De que se trata',type:'espacio',te:'handshake',title:'Un espacio para acompañar\na quienes cuidan',ce:'heart-hands',cl:'Espacio virtual',cle:'laptop',
  txt:'El proyecto busca brindar **acompañamiento psicoeducativo**, a través de un **espacio virtual**, a personas que tienen a su cargo el cuidado de familiares o de quienes necesitan asistencia.',
  cierre:'Una propuesta que pone en el centro el bienestar de quienes dedican parte de su vida a cuidar de otros.',ee:'blue-heart'},
-{name:'03 A quienes esta dirigido',type:'grid',cols:3,maxH:330,te:'graduation-cap',title:'¿Quiénes pueden sumarse\nal proyecto?',sub:'La convocatoria está dirigida a:',cards:[
- {e:'brain',t:'Estudiantes de Psicología',d:'De los últimos años\nde la carrera.'},
- {e:'teacher',t:'Estudiantes de Educación',d:'De los últimos años\nde la carrera.'},
- {e:'briefcase',t:'Estudiantes en prácticas',d:'En cualquiera\nde estas carreras.'}],
+{name:'03 A quienes esta dirigido',type:'grid',card:'r',cols:1,maxH:200,te:'graduation-cap',title:'¿Quiénes pueden sumarse\nal proyecto?',sub:'La convocatoria está dirigida a:',cards:[
+ {e:'brain',t:'Estudiantes de Psicología',d:'De los últimos años de la carrera.'},
+ {e:'teacher',t:'Estudiantes de Educación',d:'De los últimos años de la carrera.'},
+ {e:'briefcase',t:'Estudiantes en prácticas',d:'En cualquiera de estas carreras.'}],
  foot:'Una oportunidad para vincular tu formación académica con una iniciativa de apoyo a la comunidad.',fe:'link'},
-{name:'04 Asignaturas vinculadas',type:'cols',te:'books',title:'¿Qué materias forman\nparte del proyecto?',cols:[
+{name:'04 Asignaturas vinculadas',type:'listas',te:'books',title:'¿Qué materias forman\nparte del proyecto?',cols:[
  {t:'Psicología',e:'brain',c:'navy',rows:[['clipboard','Evaluación Psicológica'],['school','Práctica 1 Educacional'],['speech-balloon','Práctica 2 Clínica'],['magnifying-glass-tilted-left','Psicodiagnóstico']]},
  {t:'Educación',e:'teacher',c:'red',rows:[['open-book','Psicología General'],['student','Psicología de la Educación'],['people-hugging','Educación Inclusiva']]}]},
-{name:'05 A quienes buscamos acompanar',type:'grid',cols:4,gap:18,maxH:300,cts:25,te:'blue-heart',ts:40,
- title:'Detrás de cada persona que necesita cuidados,\nhay alguien que también necesita apoyo',
+{name:'05 A quienes buscamos acompanar',type:'grid',cols:2,maxH:300,te:'blue-heart',ts:50,
+ title:'Detrás de cada persona que\nnecesita cuidados, hay alguien\nque también necesita apoyo',
  sub:'Este espacio está pensado para quienes cuidan a personas que requieren asistencia por:',cards:[
  {e:'face-with-thermometer',t:'Enfermedad'},{e:'wheelchair-symbol',t:'Discapacidad'},{e:'crutch',t:'Dependencia funcional'},{e:'older-person',t:'Envejecimiento'}],
  foot:'Porque quienes cuidan también necesitan sentirse acompañados.',fe:'heart-hands'},
-{name:'06 Fechas importantes',type:'fecha',te:'spiral-calendar',title:'¡Todavía estás a tiempo de sumarte!',
- pre:'Inscripciones abiertas hasta el',fecha:'26 DE OCTUBRE',dia:'26',mes:'OCTUBRE',
+{name:'06 Fechas importantes',type:'fecha',te:'hourglass-not-done',title:'¡Todavía estás a tiempo\nde sumarte!',
+ pre:'Inscripciones abiertas hasta el',dia:'26',mes:'OCTUBRE',
  txt:'Si estudiás **Psicología** o **Educación** y cumplís con el perfil de la convocatoria, esta es tu oportunidad de participar.',cta:'¡No dejes pasar la fecha!'},
-{name:'07 Cierre',type:'cta',ce:'blue-heart',h1:'Tu formación también puede marcar una diferencia',
+{name:'07 Cierre',type:'cta',ce:'blue-heart',h1:'Tu formación también\npuede marcar una diferencia',
  body:'Sumate al **Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores** y formá parte de una iniciativa que busca acompañar a quienes cuidan.',
  cta:'¡Inscribite y sé parte del proyecto!',s1:'Universidad Central del Paraguay',s2:'Consultorio Psicológico Universitario'}
 ];
 
 // ---------- construcción ----------
-var BUILD={portada:portada,espacio:espacio,grid:grid,cols:columns,fecha:fecha,cta:cta};
+var BUILD={portada:portada,espacio:espacio,grid:grid,listas:listas,fecha:fecha,cta:cta};
 N=DATA.length;
 var fo=new Folder(DIR);if(!fo.exists)fo.create();
-var doc=app.documents.add(DocumentColorSpace.RGB,1200,900,N,DocumentArtboardLayout.GridByRow,60,N);
+var doc=app.documents.add(DocumentColorSpace.RGB,AW,AH,N,DocumentArtboardLayout.GridByRow,60,N);
 try{var ro=doc.rasterEffectSettings;ro.resolution=150;doc.rasterEffectSettings=ro;}catch(e){ERR.push('res '+e);}
 GR=doc.gradients.add();GR.name='FEaD Rojo-Naranja';GR.type=GradientType.LINEAR;GR.gradientStops[0].color=RED;GR.gradientStops[1].color=ORG;
 var tmpL=doc.layers[0];tmpL.name='tmp';TMP=tmpL.textFrames.add();TMP.contents='x';
 for(var i=0;i<N;i++){var d=DATA[i],ab=doc.artboards[i];ab.name=d.name;var r=ab.artboardRect;AX=r[0];AY=r[1];
   var L=doc.layers.add();L.name=d.name;
-  try{rr(L,0,0,1200,900,0,BG);var y0=header(L,d),y1=footer(L,d);BUILD[d.type](L,d,y0,y1);}catch(e){ERR.push(d.name+': '+e+' @'+e.line);}}
+  try{rr(L,0,0,AW,AH,0,BG);var y0=header(L,d),y1=footer(L,d);BUILD[d.type](L,d,y0,y1);}catch(e){ERR.push(d.name+': '+e+' @'+e.line);}}
 TMP.remove();tmpL.remove();
 doc.saveAs(new File(DIR+OUT));
 app.userInteractionLevel=UserInteractionLevel.DISPLAYALERTS;
