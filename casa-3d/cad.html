@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plano Casa Asunción 120</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Pantalla tipo CAD en oscuro (deliberadamente de un solo tema, como un espacio modelo):
+   cinta arriba, capas a la izquierda, lienzo al centro, pasos a la derecha, línea de comandos abajo. */
+:root {
+  color-scheme: dark;
+  --fondo: #14181d;
+  --panel: #1f252c;
+  --panel-2: #262d35;
+  --borde: #343e49;
+  --texto: #d9e0e7;
+  --tenue: #8794a1;
+  --lienzo: #1a1f25;
+  --rejilla: #232a32;
+  --rejilla-mayor: #2b343e;
+  --activo: #3d8bfd;
+  --seleccion: #3fd07a;
+  --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body { background: var(--fondo); color: var(--texto); font-family: var(--font-ui); font-size: 14px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+.cad { height: 100%; display: grid; grid-template-columns: 210px minmax(0, 1fr) 230px; grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "cinta cinta cinta" "capas lienzo pasos" "comandos comandos comandos";
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+.cinta { grid-area: cinta; background: var(--panel); border-bottom: 1px solid var(--borde);
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+.titulo { display: flex; align-items: center; gap: 10px; height: 34px; border-bottom: 1px solid var(--borde); min-width: 0; }
+.logo { width: 22px; height: 22px; border-radius: 3px; background: #b25a3c; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+.archivo { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.archivo span { color: var(--tenue); font-weight: 500; }
+.pestanas { display: flex; gap: 2px; margin-left: auto; font-size: 12.5px; color: var(--tenue); }
+.pestanas span { padding: 4px 9px; border-radius: 3px 3px 0 0; }
+.pestanas span.activa { color: var(--texto); background: var(--panel-2); }
+.herramientas { display: flex; align-items: stretch; gap: 14px; padding: 8px 0; overflow-x: auto; scrollbar-width: none; }
+.herramientas::-webkit-scrollbar { display: none; }
+.grupo { display: flex; flex-direction: column; gap: 4px; padding-right: 14px; border-right: 1px solid var(--borde); flex: none; }
+.grupo:last-child { border-right: 0; }
+.grupo-items { display: flex; gap: 4px; align-items: center; }
+.grupo-nombre { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); text-align: center; }
+.cmd { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 3px; border: 1px solid transparent; color: var(--tenue); }
+.cmd svg { width: 18px; height: 18px; }
+.cmd.usando { color: #fff; background: #284a7a; border-color: var(--activo); }
+.boton { font: 600 12.5px/1 var(--font-ui); text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto); background: var(--panel-2);
+  border: 1px solid var(--borde); border-radius: 3px; padding: 8px 10px; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.boton:hover { border-color: var(--activo); }
+.boton:focus-visible { outline: 2px solid var(--activo); outline-offset: 2px; }
+.boton.primario { background: var(--activo); border-color: var(--activo); color: #08111f; }
+.solo-movil { display: none; }
+
+.capas, .pasos { background: var(--panel); overflow: auto; min-height: 0; }
+.capas { grid-area: capas; border-right: 1px solid var(--borde); padding-left: env(safe-area-inset-left, 0px); }
+.pasos { grid-area: pasos; border-left: 1px solid var(--borde); padding-right: env(safe-area-inset-right, 0px); }
+.panel-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--tenue); padding: 10px 12px 6px; display: flex; justify-content: space-between; }
+.capa { display: grid; grid-template-columns: 20px 12px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 12px; font-size: 13px; cursor: pointer; border-top: 1px solid #262e37; }
+.capa input { margin: 0; width: 14px; height: 14px; accent-color: var(--activo); }
+.capa .muestra { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.25); }
+.capa .nombre { font-family: var(--font-mono); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capa .cuenta { font-family: var(--font-mono); font-size: 11px; color: var(--tenue); }
+.capa.actual .nombre { color: #fff; }
+.capa.actual { background: #22303f; }
+
+.paso { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid #262e37; cursor: pointer; background: none; color: inherit; width: 100%; text-align: left; font: inherit; border-left: 0; border-right: 0; border-bottom: 0; }
+.paso:hover { background: #242c35; }
+.paso .num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--borde); display: grid; place-items: center; font-family: var(--font-mono); font-size: 11px; color: var(--tenue); }
+.paso .nombre { font-size: 14px; font-weight: 600; }
+.paso .detalle { display: block; font-size: 11.5px; color: var(--tenue); font-weight: 500; font-family: var(--font-mono); }
+.paso .estado { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tenue); }
+.paso.hecho .num { background: #1d3b2a; border-color: #2f7a4d; color: #7fe0a6; }
+.paso.actual { background: #22303f; }
+.paso.actual .num { border-color: var(--activo); color: #fff; }
+.paso.actual .estado { color: #8dbbff; }
+.leyenda { padding: 10px 12px 14px; font-size: 12.5px; color: var(--tenue); line-height: 1.4; border-top: 1px solid var(--borde); }
+
+.lienzo { grid-area: lienzo; position: relative; background: var(--lienzo); overflow: hidden; touch-action: none; cursor: crosshair; min-height: 0; }
+#plano { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#plano text { font-family: var(--font-ui); font-weight: 500; }
+#vista3d { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.6s; pointer-events: none; }
+#vista3d.visible { opacity: 1; pointer-events: auto; cursor: grab; }
+.cruz { position: absolute; inset: 0; pointer-events: none; }
+.cruz i { position: absolute; background: rgba(255,255,255,0.55); }
+.cruz .h { left: 0; right: 0; height: 1px; }
+.cruz .v { top: 0; bottom: 0; width: 1px; }
+.cruz .caja { width: 10px; height: 10px; background: none; border: 1px solid rgba(255,255,255,0.85); }
+.etiqueta-vista { position: absolute; top: 10px; right: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--tenue); background: rgba(20,24,29,0.7); padding: 4px 8px; border: 1px solid var(--borde); border-radius: 3px; }
+.ucs { position: absolute; left: 12px; bottom: 10px; width: 56px; height: 56px; pointer-events: none; }
+.acciones3d { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100% - 24px); }
+
+.comandos { grid-area: comandos; background: var(--panel); border-top: 1px solid var(--borde);
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+.historial { font-family: var(--font-mono); font-size: 12px; line-height: 1.55; color: var(--tenue); padding-top: 6px; height: 64px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.historial div { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.historial div:last-child { color: var(--texto); }
+.prompt { font-family: var(--font-mono); font-size: 12.5px; display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid #262e37; }
+.prompt b { color: #8dbbff; font-weight: 500; }
+.parpadeo { width: 7px; height: 14px; background: var(--texto); animation: parpadeo 1s steps(1) infinite; }
+@keyframes parpadeo { 50% { opacity: 0; } }
+.estado-barra { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; padding: 6px 0 8px; border-top: 1px solid #262e37; font-family: var(--font-mono); font-size: 11.5px; color: var(--tenue); }
+.estado-barra .coord { color: var(--texto); min-width: 210px; }
+.estado-barra .modo { border: 1px solid var(--borde); border-radius: 2px; padding: 1px 6px; }
+.estado-barra .modo.on { color: #8dbbff; border-color: #2c5a9a; }
+.progreso { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.progreso input { width: 180px; accent-color: var(--activo); }
+
+.modal { position: fixed; inset: 0; background: rgba(8,10,13,0.72); display: grid; place-items: center; z-index: 10; padding: 16px; }
+.modal-caja { background: var(--panel); border: 1px solid var(--borde); border-radius: 4px; width: min(620px, 100%); max-height: 90%; overflow: auto; padding: 16px 18px; display: grid; gap: 10px; }
+.modal-caja h2 { margin: 0; font-size: 18px; }
+.modal-caja p { margin: 0; color: var(--tenue); line-height: 1.45; font-size: 14px; }
+.modal-caja pre { margin: 0; background: var(--fondo); border: 1px solid var(--borde); border-radius: 3px; padding: 10px; font-size: 11.5px; max-height: 220px; overflow: auto; color: #b9c4cf; }
+.modal-caja .fila { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+@media (prefers-reduced-motion: reduce) { .parpadeo { animation: none; } #vista3d { transition: none; } }
+
+@media (max-width: 860px) {
+  .cad { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cinta" "lienzo" "comandos"; }
+  .capas, .pasos { position: fixed; z-index: 6; top: 120px; bottom: 150px; width: min(280px, 85%); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .capas { left: 0; border: 1px solid var(--borde); }
+  .pasos { right: 0; border: 1px solid var(--borde); }
+  .capas:not(.abierto), .pasos:not(.abierto) { display: none; }
+  .solo-movil { display: inline-flex; }
+  .pestanas { display: none; }
+  .historial { height: 42px; }
+  .estado-barra .coord { min-width: 0; }
+  .estado-barra .modo { display: none; }
+  .progreso { margin-left: 0; width: 100%; }
+  .progreso input { flex: 1; width: auto; }
+}
+</style>
+</head>
+<body>
+<div class="cad">
+  <header class="cinta">
+    <div class="titulo">
+      <div class="logo" aria-hidden="true">C</div>
+      <div class="archivo">casa-asuncion-120.dxf <span>· Planta baja · Modelo</span></div>
+      <nav class="pestanas" aria-hidden="true"><span class="activa">Inicio</span><span>Insertar</span><span>Anotar</span><span>Vista</span><span>Salida</span></nav>
+    </div>
+    <div class="herramientas">
+      <div class="grupo">
+        <div class="grupo-items" id="iconosComandos"></div>
+        <div class="grupo-nombre">Comando en uso</div>
+      </div>
+      <div class="grupo">
+        <div class="grupo-items">
+          <button class="boton primario" id="btnPlay">Pausa</button>
+          <button class="boton" id="btnFinal">Saltar al final</button>
+          <button class="boton" id="btnZoom">Zoom extensión</button>
+        </div>
+        <div class="grupo-nombre">Dibujo</div>
+      </div>
+      <div class="grupo">
+        <div class="grupo-items">
+          <button class="boton" id="btnDXF">Exportar DXF</button>
+          <a class="boton" href="index.html">Obra 3D</a>
+          <button class="boton solo-movil" id="btnCapas">Capas</button>
+          <button class="boton solo-movil" id="btnPasos">Pasos</button>
+        </div>
+        <div class="grupo-nombre">Salida</div>
+      </div>
+    </div>
+  </header>
+
+  <aside class="capas" id="panelCapas" aria-label="Capas">
+    <div class="panel-titulo"><span>Capas</span><span id="totalEntidades"></span></div>
+    <div id="listaCapas"></div>
+  </aside>
+
+  <main class="lienzo" id="lienzo">
+    <svg id="plano" xmlns="http://www.w3.org/2000/svg" aria-label="Plano de planta de la casa">
+      <defs>
+        <pattern id="rejilla" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" stroke="var(--rejilla)" stroke-width="1" vector-effect="non-scaling-stroke"/></pattern>
+        <pattern id="rejillaMayor" width="500" height="500" patternUnits="userSpaceOnUse"><rect width="500" height="500" fill="url(#rejilla)"/><path d="M500 0H0V500" fill="none" stroke="var(--rejilla-mayor)" stroke-width="1" vector-effect="non-scaling-stroke"/></pattern>
+      </defs>
+      <rect x="-20000" y="-20000" width="40000" height="40000" fill="url(#rejillaMayor)"/>
+      <g id="dibujo"></g>
+      <rect id="ventanaSel" fill="rgba(63,208,122,0.12)" stroke="var(--seleccion)" stroke-width="1.2" stroke-dasharray="7 4" vector-effect="non-scaling-stroke" visibility="hidden"/>
+    </svg>
+    <canvas id="vista3d"></canvas>
+    <div class="cruz" id="cruz"><i class="h"></i><i class="v"></i><i class="caja"></i></div>
+    <div class="etiqueta-vista" id="etiquetaVista">SUPERIOR · 2D</div>
+    <svg class="ucs" viewBox="0 0 56 56" aria-hidden="true"><path d="M8 48V10M8 48H46" stroke="#d9e0e7" stroke-width="1.5" fill="none"/><path d="M8 6l-4 8h8zM50 48l-8-4v8z" fill="#d9e0e7"/><text x="16" y="14" fill="#d9e0e7" font-size="11" font-family="IBM Plex Mono, monospace">Y</text><text x="44" y="40" fill="#d9e0e7" font-size="11" font-family="IBM Plex Mono, monospace">X</text></svg>
+    <div class="acciones3d" id="acciones3d" hidden>
+      <button class="boton" id="btnTecho">Poner techo</button>
+      <button class="boton" id="btnVolverPlano">Volver al plano</button>
+      <a class="boton primario" href="index.html">Ver la obra por etapas</a>
+    </div>
+  </main>
+
+  <aside class="pasos" id="panelPasos" aria-label="Pasos de dibujo">
+    <div class="panel-titulo"><span>Orden de dibujo</span><span>1:50</span></div>
+    <div id="listaPasos"></div>
+    <div class="leyenda">El plano, el 3D y el DXF salen del mismo modelo (<code>casa-modelo.js</code>). Si cambia un muro, cambian los tres.</div>
+  </aside>
+
+  <footer class="comandos">
+    <div class="historial" id="historial" aria-live="polite"></div>
+    <div class="prompt"><b>Comando:</b><span id="promptTexto"></span><span class="parpadeo" aria-hidden="true"></span></div>
+    <div class="estado-barra">
+      <span class="coord" id="coord">0.0000, 0.0000, 0.0000</span>
+      <span class="modo on">MODELO</span><span class="modo on">REJILLA</span><span class="modo on">ORTO</span><span class="modo on">REFENT</span>
+      <span>Unidades: m · ESC 1:50</span>
+      <span class="progreso"><label for="tiempo">Avance</label><input type="range" id="tiempo" min="0" max="1" step="0.0005" value="0"></span>
+    </div>
+  </footer>
+</div>
+
+<div class="modal" id="modalDXF" hidden role="dialog" aria-modal="true" aria-labelledby="tituloDXF">
+  <div class="modal-caja">
+    <h2 id="tituloDXF">casa-asuncion-120.dxf</h2>
+    <p id="infoDXF"></p>
+    <pre id="vistaDXF"></pre>
+    <p>Si la descarga no empieza, copiá el contenido y guardalo como <code>casa.dxf</code>, o bajá el archivo del repositorio (<code>casa-3d/casa.dxf</code>). Ábrelo con AutoCAD, BricsCAD, LibreCAD o DraftSight.</p>
+    <div class="fila">
+      <button class="boton" id="btnCopiarDXF">Copiar DXF</button>
+      <button class="boton primario" id="btnCerrarDXF">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="casa-modelo.js"></script>
+<script src="casa-3d.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+const CASA = window.CASA;
+const NS = 'http://www.w3.org/2000/svg';
+const K = 100; // el SVG trabaja en centímetros
+const $ = (id) => document.getElementById(id);
+const capaInfo = Object.fromEntries(CASA.CAPAS.map(c => [c.id, c]));
+
+// ---------------------------------------------------------------------------
+// Entidades del modelo → elementos SVG con su tiempo de dibujo
+// ---------------------------------------------------------------------------
+const pasos = CASA.planoPorPasos();
+const grupos = {};
+const dibujo = $('dibujo');
+CASA.CAPAS.forEach(c => {
+  const g = document.createElementNS(NS, 'g');
+  g.dataset.capa = c.id;
+  g.setAttribute('stroke', c.color);
+  g.setAttribute('fill', 'none');
+  dibujo.appendChild(g);
+  grupos[c.id] = g;
+});
+
+function el(tag, attrs) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+const P = (p) => [p[0] * K, p[1] * K];
+const fmtC = (v) => (Math.round(v * 10000) / 10000).toFixed(4);
+
+function crearEntidad(e) {
+  const capa = capaInfo[e.capa];
+  let nodo, pts = [], tipo = 'trazo';
+  if (e.t === 'linea') {
+    const [a, b] = e.p.map(P);
+    nodo = el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1] });
+    pts = e.p;
+  } else if (e.t === 'poli') {
+    const tag = e.cerrada ? 'polygon' : 'polyline';
+    nodo = el(tag, { points: e.p.map(P).map(q => q.join(',')).join(' ') });
+    pts = e.cerrada ? e.p.concat([e.p[0]]) : e.p;
+  } else if (e.t === 'circulo') {
+    nodo = el('circle', { cx: e.c[0] * K, cy: e.c[1] * K, r: e.r * K });
+    pts = Array.from({ length: 17 }, (_, k) => [e.c[0] + Math.cos(k / 16 * Math.PI * 2) * e.r, e.c[1] + Math.sin(k / 16 * Math.PI * 2) * e.r]);
+  } else if (e.t === 'arco') {
+    const a0 = e.a0 * Math.PI / 180, a1 = e.a1 * Math.PI / 180;
+    let barrido = ((e.a1 - e.a0) % 360 + 360) % 360;
+    const p0 = [e.c[0] + Math.cos(a0) * e.r, e.c[1] + Math.sin(a0) * e.r];
+    const p1 = [e.c[0] + Math.cos(a1) * e.r, e.c[1] + Math.sin(a1) * e.r];
+    nodo = el('path', { d: `M${p0[0] * K} ${p0[1] * K} A${e.r * K} ${e.r * K} 0 ${barrido > 180 ? 1 : 0} 1 ${p1[0] * K} ${p1[1] * K}` });
+    pts = Array.from({ length: 9 }, (_, k) => { const t = a0 + (barrido * Math.PI / 180) * k / 8; return [e.c[0] + Math.cos(t) * e.r, e.c[1] + Math.sin(t) * e.r]; });
+  } else if (e.t === 'texto') {
+    tipo = 'texto';
+    const [x, y] = P(e.p);
+    nodo = el('text', { x, y, 'font-size': e.h * K * 1.25, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: capa.color, stroke: 'none' });
+    if (e.rot) nodo.setAttribute('transform', `rotate(${-e.rot} ${x} ${y})`);
+    nodo.textContent = '';
+    pts = [e.p];
+  } else if (e.t === 'relleno') {
+    tipo = 'relleno';
+    const r = e.r;
+    nodo = el('rect', { x: r[0] * K, y: r[1] * K, width: (r[2] - r[0]) * K, height: (r[3] - r[1]) * K, fill: capa.color, stroke: 'none', 'fill-opacity': 0 });
+    pts = [[r[0], r[1]], [r[2], r[3]]];
+  }
+  if (tipo === 'trazo') {
+    nodo.setAttribute('vector-effect', 'non-scaling-stroke');
+    nodo.setAttribute('stroke-width', e.capa === 'MUROS' ? 1.6 : 1);
+    nodo.setAttribute('pathLength', '1');
+    nodo.setAttribute('stroke-dasharray', '1 1');
+    nodo.setAttribute('stroke-dashoffset', '1');
+  }
+  grupos[e.capa].appendChild(nodo);
+  return { e, nodo, tipo, pts, capa: e.capa, base: e.capa === 'MUROS-RELLENO' ? 0.42 : (e.capa === 'COLUMNAS' ? 0.85 : 0.6) };
+}
+
+// Línea de tiempo (segundos)
+const ents = [];
+const tramosPaso = [];
+let T0 = 0.6;
+pasos.forEach((paso, ip) => {
+  const lista = [];
+  paso.entidades.forEach(e => {
+    if (e.t === 'cota') CASA.expandirCota(e).forEach(x => lista.push(x));
+    else lista.push(e);
+  });
+  // Primero los trazos, después rellenos y textos, como se trabaja en el tablero
+  lista.sort((a, b) => (a.t === 'relleno' || a.t === 'texto' ? 1 : 0) - (b.t === 'relleno' || b.t === 'texto' ? 1 : 0));
+  const n = lista.length;
+  const dur = Math.max(2.4, Math.min(5.5, n * 0.045));
+  const d = Math.min(0.55, dur * 0.22);
+  const inicio = T0;
+  lista.forEach((e, i) => {
+    const x = crearEntidad(e);
+    x.t0 = inicio + (n > 1 ? i / (n - 1) : 0) * (dur - d);
+    x.t1 = x.t0 + d;
+    x.paso = ip;
+    ents.push(x);
+  });
+  tramosPaso.push({ inicio, fin: inicio + dur, paso, n });
+  T0 = inicio + dur + 0.5;
+});
+const T_SEL = T0, T_SEL_FIN = T_SEL + 1.8, T_3D = T_SEL_FIN + 0.6, T_MUROS = T_3D + 5.5, T_FIN = T_MUROS + 5.5;
+tramosPaso.push({ inicio: T_SEL, fin: T_FIN, paso: { id: 'extruir', nombre: 'Selección y 3D', comando: 'EXTRUSION' }, n: 0 });
+
+// Comandos de la línea de comandos, con su momento
+const COMANDOS = {
+  ejes: ['CAPA  Capa actual: EJES  Tipo de línea: CENTER', 'LINEA  Precise primer punto: {p}', 'CIRCULO  Precise centro: {p}  Radio: 0.3500', 'TEXTO  Altura: 0.3000  Texto: A, B, C / 1, 2, 3'],
+  columnas: ['CAPA  Capa actual: COLUMNAS', 'RECTANG  Precise primera esquina: {p}  Dimensiones: 0.18 x 0.18', 'COPIA  Modo: Múltiple  9 copias', 'SOMBCREA  Patrón: SOLID'],
+  muros: ['CAPA  Capa actual: MUROS', 'POLILINEA  Precise punto inicial: {p}', 'DESFASE  Distancia: 0.1500', 'RECORTA  Designe aristas de corte', 'SOMBCREA  Patrón: SOLID  Capa: MUROS-RELLENO'],
+  carpinteria: ['CAPA  Capa actual: CARPINTERIA', 'INSERT  Bloque: VENTANA  Punto de inserción: {p}', 'INSERT  Bloque: PUERTA-080  Rotación: 90', 'ARCO  Centro, inicio, ángulo: 90'],
+  mobiliario: ['CAPA  Capa actual: MOBILIARIO', 'INSERT  Bloque: CAMA-2P  Punto de inserción: {p}', 'INSERT  Bloque: SOFA-3C', 'CAPA  Capa actual: SANITARIOS', 'INSERT  Bloque: INODORO  Rotación: 270'],
+  cotas: ['CAPA  Capa actual: COTAS', 'ACOLINEAL  Origen de la primera línea de referencia: {p}', 'ACOCONTINUA  Origen de la segunda línea de referencia', 'CAPA  Capa actual: TEXTO', 'TEXTOM  Altura: 0.1700  Ambientes y superficies'],
+  lote: ['CAPA  Capa actual: LOTE  Tipo de línea: DASHED', 'POLILINEA  Lote 12.00 x 30.00', 'CAPA  Capa actual: PISCINA', 'RECTANG  Piscina 7.00 x 3.50', 'CAPA  Capa actual: VEGETACION', 'ZOOM  [Todo/Centro/Extensión]: E'],
+  extruir: ['Designe objetos: Esquina opuesta: {n} encontrados', 'EXTRUSION  Altura de extrusión: 2.70', 'ORBITA3D  Vista: Isométrica SO']
+};
+const lineasComando = [];
+tramosPaso.forEach((tp) => {
+  const lista = COMANDOS[tp.paso.id] || [];
+  const primera = ents.find(x => x.paso === pasos.indexOf(tp.paso) && x.tipo === 'trazo');
+  const p0 = primera ? primera.pts[0] : [0, 0];
+  lista.forEach((txt, k) => {
+    const t = tp.inicio + (tp.fin - tp.inicio) * (k / lista.length) * 0.9;
+    lineasComando.push({ t, txt: txt.replace('{p}', fmtC(p0[0]) + ',' + fmtC(-p0[1])), paso: tp.paso.id });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Paneles de capas y pasos
+// ---------------------------------------------------------------------------
+const cuentas = {};
+ents.forEach(x => { cuentas[x.capa] = (cuentas[x.capa] || 0) + 1; });
+$('totalEntidades').textContent = ents.length + ' obj.';
+$('listaCapas').innerHTML = CASA.CAPAS.map(c => `
+  <label class="capa" data-capa="${c.id}">
+    <input type="checkbox" checked data-capa="${c.id}" aria-label="Mostrar ${c.id}">
+    <span class="muestra" style="background:${c.color}"></span>
+    <span class="nombre">${c.id}</span>
+    <span class="cuenta">${cuentas[c.id] || 0}</span>
+  </label>`).join('');
+$('listaCapas').addEventListener('change', (ev) => {
+  const c = ev.target.dataset.capa;
+  if (c) grupos[c].style.display = ev.target.checked ? '' : 'none';
+});
+
+$('listaPasos').innerHTML = tramosPaso.map((tp, i) => `
+  <button class="paso" data-i="${i}">
+    <span class="num">${i + 1}</span>
+    <span class="nombre">${tp.paso.nombre}<span class="detalle">${tp.n ? tp.n + ' entidades' : 'ventana de selección, extrusión'}</span></span>
+    <span class="estado"></span>
+  </button>`).join('');
+$('listaPasos').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.paso');
+  if (!b) return;
+  const tp = tramosPaso[+b.dataset.i];
+  irA(tp.inicio + 0.001, true);
+  if (!reproduciendo) alternarPlay();
+});
+
+// Íconos de comandos (indicadores, no botones)
+const ICONOS = {
+  LINEA: '<path d="M3 15L15 3" stroke="currentColor" stroke-width="1.6"/>',
+  RECTANG: '<rect x="3" y="5" width="12" height="8" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  POLILINEA: '<path d="M2 14L7 6l4 6 5-9" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  INSERT: '<rect x="3" y="3" width="8" height="8" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M9 9l7 7M16 11v5h-5" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  ACOTAR: '<path d="M3 5v9M15 5v9M3 10h12" stroke="currentColor" stroke-width="1.6"/><path d="M5 8l-2 2 2 2M13 8l2 2-2 2" stroke="currentColor" stroke-width="1.2" fill="none"/>',
+  EXTRUSION: '<path d="M4 13l5 3 5-3V6L9 3 4 6z" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M4 6l5 3 5-3M9 9v7" stroke="currentColor" stroke-width="1.5" fill="none"/>'
+};
+const comandoDePaso = { ejes: 'LINEA', columnas: 'RECTANG', muros: 'POLILINEA', carpinteria: 'INSERT', mobiliario: 'INSERT', cotas: 'ACOTAR', lote: 'POLILINEA', extruir: 'EXTRUSION' };
+$('iconosComandos').innerHTML = Object.entries(ICONOS).map(([k, svg]) => `<span class="cmd" data-cmd="${k}" title="${k}"><svg viewBox="0 0 18 18" aria-hidden="true">${svg}</svg></span>`).join('');
+
+// ---------------------------------------------------------------------------
+// Vista: viewBox animado, zoom y paneo
+// ---------------------------------------------------------------------------
+const svg = $('plano'), lienzo = $('lienzo');
+function limites(filtro) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  ents.filter(filtro).forEach(x => x.pts.forEach(p => { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }));
+  return [x0, y0, x1, y1];
+}
+const idxLote = pasos.findIndex(p => p.id === 'lote');
+const LIM_CASA = limites(x => x.paso < idxLote);
+const LIM_TODO = limites(() => true);
+function cajaVista(l, margen) {
+  const w = lienzo.clientWidth || 800, h = lienzo.clientHeight || 600;
+  let bw = (l[2] - l[0]) * K, bh = (l[3] - l[1]) * K;
+  const m = margen || 0.08;
+  bw *= 1 + m * 2; bh *= 1 + m * 2;
+  const cx = (l[0] + l[2]) / 2 * K, cy = (l[1] + l[3]) / 2 * K;
+  if (bw / bh > w / h) bh = bw * h / w; else bw = bh * w / h;
+  return [cx - bw / 2, cy - bh / 2, bw, bh];
+}
+let vb = cajaVista(LIM_CASA), vbDestino = null, vbOrigen = null, vbT0 = 0, manual = false;
+function aplicarVB() { svg.setAttribute('viewBox', vb.map(v => v.toFixed(2)).join(' ')); }
+aplicarVB();
+function animarVista(caja) {
+  if (manual) return;
+  vbOrigen = vb.slice(); vbDestino = caja; vbT0 = performance.now();
+}
+$('btnZoom').addEventListener('click', () => { manual = false; animarVista(cajaVista(tActual >= tramosPaso[idxLote].inicio ? LIM_TODO : LIM_CASA)); });
+
+function aModelo(cx, cy) {
+  const r = svg.getBoundingClientRect();
+  const s = Math.max(vb[2] / r.width, vb[3] / r.height);
+  const ox = vb[0] + (vb[2] - r.width * s) / 2, oy = vb[1] + (vb[3] - r.height * s) / 2;
+  return [ox + (cx - r.left) * s, oy + (cy - r.top) * s];
+}
+function aPantalla(mx, my) {
+  const r = svg.getBoundingClientRect();
+  const s = Math.max(vb[2] / r.width, vb[3] / r.height);
+  const ox = vb[0] + (vb[2] - r.width * s) / 2, oy = vb[1] + (vb[3] - r.height * s) / 2;
+  return [(mx - ox) / s, (my - oy) / s];
+}
+lienzo.addEventListener('wheel', (ev) => {
+  if (en3D) return;
+  ev.preventDefault();
+  manual = true; vbDestino = null;
+  const f = Math.exp(ev.deltaY * 0.0015);
+  const [mx, my] = aModelo(ev.clientX, ev.clientY);
+  vb = [mx - (mx - vb[0]) * f, my - (my - vb[1]) * f, vb[2] * f, vb[3] * f];
+  aplicarVB();
+}, { passive: false });
+const punteros = new Map();
+let arrastre = null;
+lienzo.addEventListener('pointerdown', (ev) => {
+  if (en3D) return;
+  lienzo.setPointerCapture(ev.pointerId);
+  punteros.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  manual = true; vbDestino = null;
+  arrastre = { vb: vb.slice(), puntos: new Map(punteros) };
+});
+lienzo.addEventListener('pointermove', (ev) => {
+  if (en3D) return;
+  if (!punteros.has(ev.pointerId)) {
+    const [mx, my] = aModelo(ev.clientX, ev.clientY);
+    ponerCruz(mx / K, my / K);
+    return;
+  }
+  punteros.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  const r = svg.getBoundingClientRect();
+  const s = Math.max(arrastre.vb[2] / r.width, arrastre.vb[3] / r.height);
+  const ids = [...punteros.keys()];
+  if (ids.length === 1) {
+    const a = arrastre.puntos.get(ids[0]), b = punteros.get(ids[0]);
+    vb = [arrastre.vb[0] - (b[0] - a[0]) * s, arrastre.vb[1] - (b[1] - a[1]) * s, arrastre.vb[2], arrastre.vb[3]];
+  } else if (ids.length >= 2) {
+    const a0 = arrastre.puntos.get(ids[0]), a1 = arrastre.puntos.get(ids[1]);
+    const b0 = punteros.get(ids[0]), b1 = punteros.get(ids[1]);
+    if (a0 && a1) {
+      const f = Math.hypot(a0[0] - a1[0], a0[1] - a1[1]) / Math.max(1, Math.hypot(b0[0] - b1[0], b0[1] - b1[1]));
+      const cxs = (a0[0] + a1[0]) / 2, cys = (a0[1] + a1[1]) / 2;
+      const mx = arrastre.vb[0] + (cxs - r.left) * s, my = arrastre.vb[1] + (cys - r.top) * s;
+      vb = [mx - (mx - arrastre.vb[0]) * f, my - (my - arrastre.vb[1]) * f, arrastre.vb[2] * f, arrastre.vb[3] * f];
+    }
+  }
+  aplicarVB();
+});
+const soltar = (ev) => { punteros.delete(ev.pointerId); arrastre = { vb: vb.slice(), puntos: new Map(punteros) }; };
+lienzo.addEventListener('pointerup', soltar);
+lienzo.addEventListener('pointercancel', soltar);
+
+// Cruz del cursor
+const cruz = $('cruz'), cruzH = cruz.querySelector('.h'), cruzV = cruz.querySelector('.v'), cruzC = cruz.querySelector('.caja');
+function ponerCruz(x, y) {
+  const [sx, sy] = aPantalla(x * K, y * K);
+  cruzH.style.top = sy + 'px';
+  cruzV.style.left = sx + 'px';
+  cruzC.style.left = (sx - 5) + 'px'; cruzC.style.top = (sy - 5) + 'px';
+  $('coord').textContent = `${fmtC(x)}, ${fmtC(-y)}, 0.0000`;
+}
+
+// ---------------------------------------------------------------------------
+// Estado en función del tiempo
+// ---------------------------------------------------------------------------
+const PATRON = { CENTER: '14 4 3 4', DASHED: '8 5' };
+let tActual = 0;
+function puntoSobre(pts, f) {
+  if (pts.length === 1) return pts[0];
+  let total = 0; const L = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L.push(d); total += d; }
+  let s = f * total;
+  for (let i = 0; i < L.length; i++) {
+    if (s <= L[i] || i === L.length - 1) { const g = L[i] ? Math.min(1, s / L[i]) : 0; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * g, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * g]; }
+    s -= L[i];
+  }
+  return pts[pts.length - 1];
+}
+
+function pintar(T) {
+  tActual = T;
+  let ultimo = null;
+  for (const x of ents) {
+    const f = Math.max(0, Math.min(1, (T - x.t0) / (x.t1 - x.t0)));
+    if (x.f === f) { if (f > 0 && f < 1) ultimo = x; continue; }
+    x.f = f;
+    if (x.tipo === 'trazo') {
+      if (f >= 1) {
+        const patron = PATRON[capaInfo[x.capa].tipo];
+        x.nodo.removeAttribute('pathLength');
+        if (patron) x.nodo.setAttribute('stroke-dasharray', patron); else x.nodo.removeAttribute('stroke-dasharray');
+        x.nodo.removeAttribute('stroke-dashoffset');
+      } else {
+        x.nodo.setAttribute('pathLength', '1');
+        x.nodo.setAttribute('stroke-dasharray', '1 1');
+        x.nodo.setAttribute('stroke-dashoffset', String(1 - f));
+      }
+    } else if (x.tipo === 'texto') {
+      const n = Math.ceil(f * x.e.s.length);
+      x.nodo.textContent = x.e.s.slice(0, n);
+    } else {
+      x.nodo.setAttribute('fill-opacity', String(f * x.base));
+    }
+    if (f > 0 && f < 1) ultimo = x;
+  }
+  if (ultimo) {
+    const p = puntoSobre(ultimo.pts, Math.max(0, Math.min(1, (T - ultimo.t0) / (ultimo.t1 - ultimo.t0))));
+    ponerCruz(p[0], p[1]);
+  }
+
+  // Paso actual, capa actual y comando en uso
+  let ip = tramosPaso.findIndex(tp => T >= tp.inicio && T < tp.fin + 0.5);
+  if (ip < 0) ip = T >= T_FIN ? tramosPaso.length - 1 : 0;
+  document.querySelectorAll('.paso').forEach((b, i) => {
+    const hecho = T >= tramosPaso[i].fin;
+    b.classList.toggle('hecho', hecho);
+    b.classList.toggle('actual', i === ip && !hecho);
+    b.querySelector('.estado').textContent = hecho ? 'listo' : (i === ip && T >= tramosPaso[i].inicio ? 'dibujando' : '');
+  });
+  const pasoId = tramosPaso[ip].paso.id;
+  document.querySelectorAll('.cmd').forEach(c => c.classList.toggle('usando', T > 0.5 && T < T_FIN && c.dataset.cmd === comandoDePaso[pasoId]));
+  const capaActual = ultimo ? ultimo.capa : null;
+  document.querySelectorAll('.capa').forEach(c => c.classList.toggle('actual', c.dataset.capa === capaActual));
+
+  // Línea de comandos
+  const vistas = lineasComando.filter(l => l.t <= T);
+  const nSel = ents.filter(x => x.paso < idxLote).length;
+  $('historial').innerHTML = vistas.slice(-4).map(l => `<div>Comando: ${l.txt.replace('{n}', nSel)}</div>`).join('');
+  $('promptTexto').textContent = T >= T_FIN ? 'Arrastrá para orbitar. Rueda para acercar.' : (T >= T_SEL ? 'EXTRUSION' : (COMANDOS[pasoId] ? (comandoDePaso[pasoId] === 'ACOTAR' ? 'ACOLINEAL' : comandoDePaso[pasoId]) : ''));
+
+  // Ventana de selección y resaltado
+  const sel = $('ventanaSel');
+  if (T >= T_SEL && T < T_3D + 0.4) {
+    const f = Math.min(1, (T - T_SEL) / (T_SEL_FIN - T_SEL));
+    const l = LIM_CASA, x1 = (l[2] + 0.6) * K, y1 = (l[3] + 0.6) * K, x0 = (l[0] - 0.6) * K, y0 = (l[1] - 0.6) * K;
+    const xa = x1 + (x0 - x1) * f, ya = y1 + (y0 - y1) * f;
+    sel.setAttribute('x', Math.min(xa, x1)); sel.setAttribute('y', Math.min(ya, y1));
+    sel.setAttribute('width', Math.abs(x1 - xa)); sel.setAttribute('height', Math.abs(y1 - ya));
+    sel.setAttribute('visibility', 'visible');
+    ponerCruz(xa / K, ya / K);
+  } else sel.setAttribute('visibility', 'hidden');
+  const resaltar = T >= T_SEL_FIN;
+  if (resaltar !== pintar.resaltado) {
+    pintar.resaltado = resaltar;
+    ents.forEach(x => {
+      if (x.paso >= idxLote || x.tipo !== 'trazo') return;
+      if (resaltar) { x.nodo.setAttribute('stroke', '#7db7ff'); x.nodo.setAttribute('stroke-dasharray', '5 3'); }
+      else { x.nodo.removeAttribute('stroke'); if (x.f >= 1) { const pt = PATRON[capaInfo[x.capa].tipo]; if (pt) x.nodo.setAttribute('stroke-dasharray', pt); else x.nodo.removeAttribute('stroke-dasharray'); } }
+    });
+  }
+
+  // Encuadre automático por paso
+  const objetivo = T >= tramosPaso[idxLote].inicio && T < T_SEL ? 'todo' : 'casa';
+  if (objetivo !== pintar.encuadre) { pintar.encuadre = objetivo; animarVista(cajaVista(objetivo === 'todo' ? LIM_TODO : LIM_CASA)); }
+
+  // 3D
+  const quiere3D = T >= T_3D;
+  if (quiere3D !== en3D) cambiar3D(quiere3D);
+  if (en3D && vista3D) vista3D.tiempo(T - T_3D);
+  $('tiempo').value = Math.min(1, T / T_FIN);
+}
+
+// ---------------------------------------------------------------------------
+// Vista 3D con el mismo modelo
+// ---------------------------------------------------------------------------
+let en3D = false, vista3D = null, techo = false;
+async function cambiar3D(on) {
+  en3D = on;
+  $('vista3d').classList.toggle('visible', on);
+  $('acciones3d').hidden = !on;
+  cruz.style.display = on ? 'none' : '';
+  $('etiquetaVista').textContent = on ? 'SO ISOMÉTRICA · 3D · ESTILO MAQUETA' : 'SUPERIOR · 2D';
+  svg.style.opacity = on ? '0.25' : '1';
+  if (on && !vista3D) {
+    vista3D = await crear3D();
+    vista3D.tiempo(Math.max(0, tActual - T_3D));
+  }
+}
+
+async function crear3D() {
+  const THREE = await import('three');
+  const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+  const canvas = $('vista3d');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  const escena = new THREE.Scene();
+  const camara = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
+  const casa = CASA3D.construir(THREE, CASA, { estilo: 'maqueta' });
+  escena.add(casa.raiz);
+  escena.add(new THREE.HemisphereLight('#ffffff', '#b8b2a6', 1.5));
+  const sol = new THREE.DirectionalLight('#ffffff', 2.2);
+  sol.position.copy(casa.aMundo(-14, -10, 26));
+  sol.target.position.copy(casa.aMundo(6, 12, 0));
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(2048, 2048);
+  Object.assign(sol.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
+  sol.shadow.normalBias = 0.03;
+  escena.add(sol, sol.target);
+  const objetivo = casa.casaAMundo(5, 6.5, 0.8);
+  const controles = new OrbitControls(camara, canvas);
+  controles.target.copy(objetivo);
+  controles.enableDamping = true;
+  controles.maxPolarAngle = Math.PI * 0.49;
+  const desdeArriba = objetivo.clone().add(new THREE.Vector3(0.01, 34, 0.5));
+  const iso = objetivo.clone().add(new THREE.Vector3(-17, 15, 19));
+  camara.position.copy(desdeArriba);
+  let orbitaLibre = false;
+  controles.addEventListener('start', () => { orbitaLibre = true; });
+
+  const P = casa.niveles;
+  function oculto(u) {
+    if (u.sistema) return true;
+    if (u.etapa === 0 && u.base.y < 0) return true;
+    if (techo) return false;
+    if (u.etapa === 1 && u.anim === 'caer') return true;
+    if (u.etapa >= 3 && u.base.y >= P.techo - 0.02) return true;
+    if (u.etapa === 4 && u.base.y > P.cielo - 0.05 && u.base.y < P.techo) return true;
+    return false;
+  }
+  let ultimoT = -1;
+  function tiempo(t) {
+    ultimoT = t;
+    // Fase 1: muros y aberturas suben sobre el contrapiso. Fase 2: terminaciones, jardín y piscina.
+    const tm = t < 5.5 ? 3 + Math.min(1, t / 5.5) : 4 + Math.min(1, (t - 5.5) / 5.5);
+    casa.actualizar(Math.max(tm, 2.0001));
+    casa.elementos.forEach(e => { if (oculto(e.userData)) e.visible = false; });
+    if (!orbitaLibre) {
+      const f = Math.min(1, t / 4.5), s = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+      camara.position.lerpVectors(desdeArriba, iso, s);
+      if (t > 4.5) {
+        const ang = (t - 4.5) * 0.05;
+        const v = iso.clone().sub(objetivo);
+        v.applyAxisAngle(new THREE.Vector3(0, 1, 0), ang);
+        camara.position.copy(objetivo).add(v);
+      }
+    }
+  }
+  function ajustar() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    camara.aspect = w / Math.max(1, h);
+    // En pantallas angostas se abre el campo visual para que entre la casa completa.
+    camara.fov = camara.aspect < 1.25 ? Math.min(62, 32 * Math.pow(1.25 / camara.aspect, 0.85)) : 32;
+    camara.updateProjectionMatrix();
+  }
+  new ResizeObserver(ajustar).observe(canvas);
+  ajustar();
+  function cuadro() {
+    if (en3D) { controles.update(); renderer.render(escena, camara); }
+    requestAnimationFrame(cuadro);
+  }
+  requestAnimationFrame(cuadro);
+  return { tiempo, refrescar: () => tiempo(ultimoT) };
+}
+$('btnTecho').addEventListener('click', (ev) => {
+  techo = !techo;
+  ev.currentTarget.textContent = techo ? 'Sacar techo' : 'Poner techo';
+  if (vista3D) vista3D.refrescar();
+});
+$('btnVolverPlano').addEventListener('click', () => { irA(T_SEL - 0.3, false); });
+
+// ---------------------------------------------------------------------------
+// Reproducción
+// ---------------------------------------------------------------------------
+let reproduciendo = true, tReal = performance.now(), T = 0;
+function alternarPlay() {
+  reproduciendo = !reproduciendo;
+  if (reproduciendo && T >= T_FIN) T = 0;
+  $('btnPlay').textContent = reproduciendo ? 'Pausa' : (T >= T_FIN ? 'Repetir' : 'Seguir');
+  tReal = performance.now();
+}
+function irA(t, seguir) {
+  T = Math.max(0, Math.min(T_FIN, t));
+  if (!seguir && reproduciendo) alternarPlay();
+  pintar(T);
+}
+$('btnPlay').addEventListener('click', alternarPlay);
+$('btnFinal').addEventListener('click', () => { irA(T_FIN, false); });
+$('tiempo').addEventListener('input', (ev) => { manual = false; irA(parseFloat(ev.target.value) * T_FIN, false); });
+$('btnCapas').addEventListener('click', () => { $('panelCapas').classList.toggle('abierto'); $('panelPasos').classList.remove('abierto'); });
+$('btnPasos').addEventListener('click', () => { $('panelPasos').classList.toggle('abierto'); $('panelCapas').classList.remove('abierto'); });
+
+// ---------------------------------------------------------------------------
+// DXF
+// ---------------------------------------------------------------------------
+let textoDXF = '';
+$('btnDXF').addEventListener('click', () => {
+  textoDXF = CASA.exportarDXF();
+  const bytes = new Uint8Array(textoDXF.length);
+  for (let i = 0; i < textoDXF.length; i++) bytes[i] = textoDXF.charCodeAt(i) & 0xff;
+  try {
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/dxf' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'casa-asuncion-120.dxf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { /* algunos visores bloquean descargas: queda el botón Copiar */ }
+  const lineas = textoDXF.split('\r\n');
+  const ent = (textoDXF.match(/\r\n0\r\n(LINE|POLYLINE|CIRCLE|ARC|TEXT|SOLID)\r\n/g) || []).length;
+  $('infoDXF').textContent = `DXF R12 (AC1009), unidades en metros, ${CASA.CAPAS.length} capas, ${ent} entidades, ${Math.round(bytes.length / 1024)} KB.`;
+  $('vistaDXF').textContent = lineas.slice(0, 60).join('\n') + '\n…';
+  $('modalDXF').hidden = false;
+  $('btnCerrarDXF').focus();
+});
+$('btnCerrarDXF').addEventListener('click', () => { $('modalDXF').hidden = true; });
+$('btnCopiarDXF').addEventListener('click', async (ev) => {
+  const b = ev.currentTarget;
+  try { await navigator.clipboard.writeText(textoDXF); b.textContent = 'Copiado'; }
+  catch (e) {
+    $('vistaDXF').textContent = textoDXF;
+    const r = document.createRange(); r.selectNodeContents($('vistaDXF'));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    b.textContent = 'Seleccionado: copiá con Ctrl+C';
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Bucle
+// ---------------------------------------------------------------------------
+new ResizeObserver(() => { if (!manual) { vb = cajaVista(pintar.encuadre === 'todo' ? LIM_TODO : LIM_CASA); aplicarVB(); } }).observe(lienzo);
+function cuadro(ahora) {
+  if (reproduciendo) {
+    T = Math.min(T_FIN, T + (ahora - tReal) / 1000);
+    pintar(T);
+    if (T >= T_FIN) alternarPlay();
+  }
+  tReal = ahora;
+  if (vbDestino) {
+    const f = Math.min(1, (ahora - vbT0) / 900), e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    vb = vbOrigen.map((v, i) => v + (vbDestino[i] - v) * e);
+    aplicarVB();
+    if (f >= 1) vbDestino = null;
+  }
+  requestAnimationFrame(cuadro);
+}
+pintar(0);
+requestAnimationFrame(cuadro);
+window.__cad = { irA, T_FIN, T_SEL, T_3D, tramosPaso };
+</script>
+</body>
+</html>
