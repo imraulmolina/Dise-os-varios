@@ -1,16 +1,18 @@
 ﻿#target illustrator
-// Carrusel "Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores" — 7 placas de 1080×1350 con la línea gráfica de la skill
-// fead-infografias (tarjetas blancas, emojis Apple, badge con arco, Gotham), con el azul institucional #2153D0 en lugar del azul oscuro.
+// Carrusel "Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores" — 7 placas de 1080×1350.
+// Híbrido: línea del carrusel Central Next de referencia (fondos alternados, diagonales que continúan entre placas, títulos con
+// peso mixto y subrayado rojo, banner con emblema, tarjetas con filete, checklist con borde, caja translúcida) + skill
+// fead-infografias (emojis Apple, badge con arco degradado, satélites, sombras suaves, tintes). Azul institucional #2153D0.
 app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
-// ===== CONFIG: carpeta de salida, nombre del .ai, carpeta de emojis Apple (slug.png) y encabezado de marca =====
+// ===== CONFIG: carpeta de salida, nombre del .ai, emojis Apple (slug.png) y logo =====
 var DIR = 'C:/Users/raulm/Claude/UCP/Carrusel-cuidadores/', OUT = 'Carrusel_Apoyo_Cuidadores.ai';
-var EM = 'C:/Users/raulm/.claude/skills/fead-infografias/assets/emojis-apple/', ERR = [];
-var HP = 'UCP', HT = 'Consultorio Psicológico Universitario';
-var AW = 1080, AH = 1350, MG = 60, CW = AW-2*MG, MX = AW/2;   // mesa, margen lateral, ancho útil y centro
+var EM = 'C:/Users/raulm/.claude/skills/fead-infografias/assets/emojis-apple/', ERR = [], NOTE = [];
+var LOGO = DIR+'logo-ucp.png';   // logo UCP a color (png, ai, svg o pdf); si no está, la portada usa un rótulo de texto provisorio
+var AW = 1080, AH = 1350, ML = 120, MX = AW/2, SL = 0.126;   // mesa, margen izquierdo, centro y pendiente de las diagonales
 function C(h){var c=new RGBColor();c.red=parseInt(h.substr(0,2),16);c.green=parseInt(h.substr(2,2),16);c.blue=parseInt(h.substr(4,2),16);return c;}
-var NAVY=C('2153D0'),SHD=C('1B365D'),RED=C('E31B2D'),ORG=C('FF8A3D'),BG=C('F2F3F7'),WHITE=C('FFFFFF'),INK=C('1C2536'),GRAY=C('646C7C'),
-    LINE=C('E8EBF1'),TRACK=C('ECEEF3'),SKY=C('C9D7F7'),RULE=C('4A72DA'),TBLUE=NAVY;
-var TH={navy:{m:NAVY,t:C('E9EEFB')},red:{m:RED,t:C('FDECEE')}},TINT=[TH.navy.t,TH.red.t];
+var NAVY=C('2153D0'),RED=C('FA2626'),ORG=C('FF8A3D'),BG=C('F7F7F7'),BG2=C('EEEEEE'),WHITE=C('FFFFFF'),GRAY=C('68686A'),DARK=C('3E3F43'),
+    SHD=C('1B365D'),TRACK=C('ECEEF3'),SKY=C('C9D7F7'),RULE=C('4A72DA'),LINE2=C('D5D8DE');
+var TH={navy:{m:NAVY,t:C('E7EDF9')},red:{m:RED,t:C('FDECEE')}},TINT=[TH.navy.t,TH.red.t];
 var F={b:app.textFonts.getByName('Gotham-Bold'),s:app.textFonts.getByName('Gotham-Medium'),r:app.textFonts.getByName('Gotham-Book')};
 var AX=0,AY=0,TMP,GR,N;
 function X(x){return AX+x;} function Y(y){return AY-y;}
@@ -27,19 +29,24 @@ function unb64(s){var k='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012
 function emFile(k){var f=new File(EM+k+'.png');if(f.exists||!XE[k])return f;
   var d=new Folder(Folder.temp+'/fead_emojis');if(!d.exists)d.create();f=new File(d.fullName+'/'+k+'.png');
   if(!f.exists){f.encoding='BINARY';f.open('w');f.write(unb64(XE[k]));f.close();}return f;}
-function E(P,k,cx,cy,sz){var f=emFile(k);if(!f.exists){ERR.push('emoji '+k);return;}
-  var p=P.placedItems.add();p.file=f;p.width=sz;p.height=sz;p.left=X(cx-sz/2);p.top=Y(cy-sz/2);p.name=k;p.embed();}
+function E(P,k,cx,cy,sz,rot){var f=emFile(k);if(!f.exists){ERR.push('emoji '+k);return;}
+  var p=P.placedItems.add();p.file=f;p.width=sz;p.height=sz;p.left=X(cx-sz/2);p.top=Y(cy-sz/2);p.name=k;if(rot)p.rotate(rot);p.embed();}
 
 // ---------- primitivas ----------
 function paint(p,f,s,sw){if(f){p.filled=true;p.fillColor=f;}else p.filled=false;if(s){p.stroked=true;p.strokeColor=s;p.strokeWidth=sw||1;}else p.stroked=false;return p;}
 function rr(P,x,y,w,h,r,f,s,sw){return paint(P.pathItems.roundedRectangle(Y(y),X(x),w,h,r,r),f,s,sw);}
 function ell(P,cx,cy,rx,ry,f,s,sw){return paint(P.pathItems.ellipse(Y(cy-ry),X(cx-rx),rx*2,ry*2),f,s,sw);}
 function circ(P,cx,cy,r,f,s,sw){return ell(P,cx,cy,r,r,f,s,sw);}
+function bg(P,f){rr(P,0,0,AW,AH,0,f);}
 function blur(p,b){try{p.applyEffect('<LiveEffect name="Adobe PSL Gaussian Blur"><Dict data="R blur '+b+'"/></LiveEffect>');}catch(e){ERR.push('blur '+e);}}
 function card(P,x,y,w,h,r,f){var s=rr(P,x+6,y+10,w-12,h-6,r,SHD);s.opacity=10;blur(s,18);return rr(P,x,y,w,h,r,f||WHITE);}
 function ccard(P,cx,cy,r){var s=circ(P,cx,cy+9,r-3,SHD);s.opacity=11;blur(s,16);return circ(P,cx,cy,r,WHITE);}
 function sat(P,cx,cy,r,e){ccard(P,cx,cy,r);E(P,e,cx,cy,r*1.3);}
+function scard(P,x,y,w,h,sc,fc,sh){var r=24;   // tarjeta con filete de color a la izquierda (referencia)
+  if(sh){var s=rr(P,x+6,y+10,w-12,h-6,r,SHD);s.opacity=9;blur(s,18);}
+  rr(P,x,y,20+2*r,h,r,sc);rr(P,x+20,y,w-20,h,r,fc);rr(P,x+20,y,r,h,0,fc);}
 function pts(a){var o=[];for(var i=0;i<a.length;i++)o.push([X(a[i][0]),Y(a[i][1])]);return o;}
+function poly(P,a,f){var p=P.pathItems.add();p.setEntirePath(pts(a));p.closed=true;return paint(p,f);}
 function line(P,a,s,sw,dash){var p=P.pathItems.add();p.setEntirePath(pts(a));p.filled=false;p.stroked=true;p.strokeColor=s;p.strokeWidth=sw;
   p.strokeCap=StrokeCap.ROUNDENDCAP;p.strokeJoin=StrokeJoin.ROUNDENDJOIN;if(dash)p.strokeDashes=dash;return p;}
 function arc(P,cx,cy,r,a0,a1,sw,col){var n=Math.ceil(Math.abs(a1-a0)/90),da=(a1-a0)/n,k=4/3*Math.tan(da*Math.PI/720)*r,p=P.pathItems.add();
@@ -50,7 +57,7 @@ function GC(){var g=new GradientColor();g.gradient=GR;return g;}
 
 // ---------- texto (**así** marca un tramo en negrita y color) ----------
 function sty(t,f,sz,c,ld,tr){var a=t.textRange.characterAttributes;a.textFont=f;a.size=sz;a.fillColor=c;if(ld){a.autoLeading=false;a.leading=ld;}a.tracking=tr||0;}
-function mw(s,f,sz,tr){TMP.contents=s;sty(TMP,f,sz,INK,0,tr);return TMP.width;}
+function mw(s,f,sz,tr){TMP.contents=s;sty(TMP,f,sz,DARK,0,tr);return TMP.width;}
 function mwm(s,f,hf,sz,tr,b){var a=s.split('**'),w=0;for(var k=0;k<a.length;k++)if(a[k])w+=mw(a[k],(k%2==1)!=b?hf:f,sz,tr);return w;}
 function flip(s,b){return (s.split('**').length-1)%2?!b:b;}
 function wrap(s,f,sz,w,tr,hf){var o=[],ps=s.split('\n'),b=false;hf=hf||f;   // mide los tramos **resaltados** con su fuente
@@ -66,143 +73,144 @@ function T(P,s,x,y,o){var hl=[],p='',k,j,a=(o.w?wrap(s,o.f,o.size,o.w,o.tr,o.hf|
   t.textRange.paragraphAttributes.justification=o.just=='c'?Justification.CENTER:(o.just=='r'?Justification.RIGHT:Justification.LEFT);
   t.top=Y(y);t.left=o.just=='c'?X(x)-t.width/2:(o.just=='r'?X(x)-t.width:X(x));return t;}
 function vc(t,cy){t.top=Y(cy-t.height/2);}
-function pill(P,s,x,y,o){var sz=o.size||14,h=o.h||Math.round(sz*2.2),px=o.px||14,ew=o.e?sz*1.7:0;
-  var t=T(P,s,0,0,{f:o.f||F.s,size:sz,c:o.c||WHITE,tr:o.tr}),w=t.width+2*px+ew,x0=o.anchor=='c'?x-w/2:(o.anchor=='r'?x-w:x);
-  if(o.sh){var sd=rr(P,x0+4,y+6,w-8,h-2,h/2,SHD);sd.opacity=14;blur(sd,10);sd.zOrder(ZOrderMethod.SENDBACKWARD);}
-  var r=rr(P,x0,y,w,h,h/2,o.bg||NAVY,o.st,o.sw);r.zOrder(ZOrderMethod.SENDBACKWARD);
-  if(o.e)E(P,o.e,x0+px+sz*0.65,y+h/2,sz*1.4);
-  t.left=X(x0+px+ew);vc(t,y+h/2);return {w:w,h:h,x:x0};}
+function gc(g,cy){var b=g.geometricBounds;g.translate(0,Y(cy-(b[1]-b[3])/2)-b[1]);}   // centra un grupo en vertical
 
-// ---------- estructura común ----------
-function brand(P){var p=pill(P,HP,MG,50,{f:F.b,size:20,bg:NAVY,c:WHITE,h:46,px:20});
-  var t=T(P,HT,MG+p.w+16,0,{f:F.s,size:20,c:GRAY});vc(t,73);}
-function header(P,d){brand(P);if(!d.title)return 120;var y=130,ts=d.ts||56;
-  if(d.te){circ(P,MX,y+42,42,TH.navy.t);E(P,d.te,MX,y+42,58);y+=108;}
-  var t=T(P,d.title,MX,y,{f:F.b,size:ts,c:TBLUE,just:'c',w:d.tw||CW,lead:Math.round(ts*1.1),tr:-12});
-  y+=t.height+20;rr(P,MX-36,y,72,8,0,RED);y+=8;
-  if(d.sub){y+=22;var ss=d.ss||28,s=T(P,d.sub,MX,y,{f:F.r,size:ss,c:GRAY,just:'c',w:d.sw||900,lead:Math.round(ss*1.3)});y+=s.height;}
-  return y+40;}
-function footer(P,d){if(!d.foot)return AH-50;var x=MG,w=CW;
-  var t=T(P,d.foot,x+112,0,{f:F.r,size:26,c:INK,w:w-150,lead:34});
-  var h=Math.max(112,t.height+52),y=AH-50-h;card(P,x,y,w,h,Math.min(32,h/2));
-  circ(P,x+58,y+h/2,36,TH.navy.t);E(P,d.fe||'light-bulb',x+58,y+h/2,48);
-  vc(t,y+h/2);t.zOrder(ZOrderMethod.BRINGTOFRONT);return y-30;}
-function badge(P,cx,cy,R,e,label,o){o=o||{};ccard(P,cx,cy,R);var sw=R>140?12:8,ri=R-(R>140?26:18),h=o.h||38;
+// ---------- componentes ----------
+// Título con **negritas** sobre un peso base (o.f). o.e: emoji al final; o.bar: 'w' subraya la última palabra, 'l' barra fija a la izquierda.
+function title(P,s,x,y,o){var sz=o.size,ld=Math.round(sz*1.1),f=o.f||F.b,hf=F.b,tr=-12,
+  t=T(P,s,x,y,{f:f,hf:hf,hc:o.c,size:sz,c:o.c,just:o.just,w:o.w,lead:ld,tr:tr}),ls=wrap(s,f,sz,o.w,tr,hf).split('\r'),n=ls.length,b=false,k;
+  for(k=0;k<n-1;k++)b=flip(ls[k],b);
+  var ln=ls[n-1],lw=mwm(ln,f,hf,sz,tr,b),x0=o.just=='c'?x-lw/2:x,by=y+t.height+16;
+  if(o.e)E(P,o.e,x0+lw+sz*0.75,y+(n-1)*ld+sz*0.58,sz*1.05);
+  if(o.bar=='l')rr(P,x,by+6,150,10,0,RED);
+  if(o.bar=='w'){var sp=ln.lastIndexOf(' '),wd=ln.substr(sp+1),wb=flip(ln.substr(0,sp+1),b);if(wd.indexOf('**')==0)wb=!wb;
+    wd=wd.replace(/\*\*/g,'');var pu=(/[?!.,:]+$/.exec(wd)||[''])[0],cr=wd.substr(0,wd.length-pu.length),wf=wb?hf:f,
+    pw=pu?mw(pu,wf,sz,tr):0,cw=mw(cr,wf,sz,tr);rr(P,x0+lw-pw-cw,by,cw,10,0,RED);}
+  return o.bar?by+16:y+t.height;}
+// Banner "Convocatoria abierta" de la referencia: emblema rojo con arcos + barra redondeada a la derecha.
+function banner(P,s,x,y,o){var h=o.h||80,ew=Math.round(h*0.42),px=o.px||40,sz=o.size||38,ex=o.e?sz*1.5:0,
+  t=T(P,s,0,0,{f:o.f||F.s,size:sz,c:o.c||WHITE}),w=t.width+2*px+ex;
+  rr(P,x+ew,y,w,h,16,o.bg||NAVY);rr(P,x+ew,y,24,h,0,o.bg||NAVY);rr(P,x,y,ew,h,0,RED);
+  for(var k=1;k<=3;k++)arc(P,x+ew,y+h,ew*0.3*k,180,270,ew*0.13,WHITE);
+  if(o.e)E(P,o.e,x+ew+px+sz*0.55,y+h/2,sz*1.25);
+  t.zOrder(ZOrderMethod.BRINGTOFRONT);t.left=X(x+ew+px+ex);vc(t,y+h/2);return {w:ew+w,h:h};}
+function badge(P,cx,cy,R,e,es){ccard(P,cx,cy,R);var sw=R>140?12:9,ri=R-(R>140?26:20);
   circ(P,cx,cy,ri,null,TRACK,sw);arc(P,cx,cy,ri,135,372,sw,GC());
-  var ka=372*Math.PI/180;circ(P,cx+ri*Math.cos(ka),cy+ri*Math.sin(ka),sw,WHITE,ORG,sw/2);
-  E(P,e,cx,cy-(label?h*0.25:0),R*(o.es||0.95));
-  if(label)pill(P,label,cx,cy+R-h/2,{f:o.f||F.s,size:o.size||16,bg:o.bg||NAVY,c:WHITE,h:h,px:o.px||18,anchor:'c',sh:true,e:o.e});}
+  var ka=372*Math.PI/180;circ(P,cx+ri*Math.cos(ka),cy+ri*Math.sin(ka),sw,WHITE,ORG,sw/2);E(P,e,cx,cy,R*(es||0.85));}
+function calW(P,cx,y0,w,h,mes,dia){var x0=cx-w/2,band=Math.round(h*0.28);   // calendario: banda roja con el mes y número grande
+  card(P,x0,y0,w,h,32);rr(P,x0,y0,w,band,32,RED);rr(P,x0,y0+band-34,w,34,0,RED);
+  var m=T(P,mes,cx,0,{f:F.b,size:Math.round(band*0.36),c:WHITE,just:'c',tr:120});vc(m,y0+band/2+2);
+  rr(P,x0+w*0.25-8,y0-18,16,42,8,DARK);rr(P,x0+w*0.75-8,y0-18,16,42,8,DARK);
+  var n=T(P,dia,cx,0,{f:F.b,size:Math.round(h*0.52),c:NAVY,just:'c',tr:-30});vc(n,y0+band+(h-band)/2+6);}
+function logo(P,x,y,h){var f=new File(LOGO),p,w;
+  if(f.exists){p=P.placedItems.add();p.file=f;w=p.width*h/p.height;p.width=w;p.height=h;p.left=X(x);p.top=Y(y);p.embed();return w;}
+  NOTE.push('Logo: no encontré '+LOGO+' (usé un rótulo de texto provisorio)');
+  var a=T(P,'UNIVERSIDAD\rCENTRAL',x,y+6,{f:F.s,size:32,c:NAVY,lead:35,tr:30}),b=T(P,'DEL PARAGUAY',x+2,y+a.height+14,{f:F.r,size:13,c:GRAY,tr:420});
+  return Math.max(a.width,b.width);}
 
-// ---------- placas (cada una arma su bloque y lo centra en vertical entre T0 y B0) ----------
-function portada(P,d,T0,B0){var R=d.R||210,ph=60,gap=78,g=P.groupItems.add(),ts=d.ts||70;
-  var t=T(g,d.h1,MX,0,{f:F.b,size:ts,c:TBLUE,just:'c',w:CW,lead:Math.round(ts*1.06),tr:-15}),y=t.height+30;
-  rr(g,MX-40,y,80,8,0,RED);y+=8+34;
-  var p=T(g,d.proj,MX,y,{f:F.s,size:33,c:INK,just:'c',w:820,lead:42});y+=p.height+20;
-  y+=T(g,d.ini,MX,y,{f:F.r,size:25,c:GRAY,just:'c',w:760,lead:33}).height;
-  var cy=T0+(B0-T0-(2*R+ph/2+gap+y))/2+R;
-  badge(P,MX,cy,R,d.ce,d.cl,{bg:RED,f:F.b,size:26,h:ph,px:32,es:0.72});
-  sat(P,MX-R-10,cy-R+70,54,'heart-hands');sat(P,MX+R+6,cy+R-90,50,'people-hugging');
-  g.translate(0,-(cy+R+ph/2+gap));}
+// ---------- placas ----------
+function s1(P,d){bg(P,BG);poly(P,[[1026,0],[AW,0],[AW,AH],[1026-SL*AH,AH]],NAVY);   // banda diagonal que sigue en la placa 2
+  var lw=logo(P,ML,92,104);line(P,[[ML+lw+34,96],[ML+lw+34,192]],LINE2,2);
+  var m=T(P,d.marca,ML+lw+66,0,{f:F.s,size:23,c:GRAY,lead:29});vc(m,144);
+  var y=title(P,d.h1,ML,330,{size:74,c:NAVY,w:800,e:d.te})+50;
+  banner(P,d.cl,ML,y,{size:38,h:80});y+=80+58;
+  T(P,d.sub,ML,y,{f:F.s,size:40,c:NAVY,w:720,lead:50,hc:NAVY});
+  T(P,d.ini,ML,1182,{f:F.r,size:24,c:GRAY,w:560,lead:32});
+  badge(P,876,1060,130,d.ce);sat(P,876+112,1060-118,48,'people-hugging');}
 
-function espacio(P,d,T0,B0){var R=d.R||140,ph=50,gap=56,x=MG,w=CW,pad=54,tw=w-2*pad,g=P.groupItems.add();
-  var a=T(g,d.txt,x+pad,0,{f:F.r,size:28,c:INK,w:tw,lead:39}),y=a.height+32;
-  line(g,[[x+pad,y],[x+w-pad,y]],LINE,1.8);y+=32;
-  var u=T(g,d.cierre,x+pad+96,y,{f:F.s,size:26,c:NAVY,w:tw-96,lead:34}),uh=Math.max(u.height,76);vc(u,y+uh/2);
-  circ(g,x+pad+38,y+uh/2,38,TH.navy.t);E(g,d.ee,x+pad+38,y+uh/2,50);y+=uh;
-  var ch=y+2*pad,cy=T0+(B0-T0-(2*R+ph/2+gap+ch))/2+R,y0=cy+R+ph/2+gap;
-  badge(P,MX,cy,R,d.ce,d.cl,{e:d.cle,size:22,h:ph,px:22,es:0.8});
-  g.translate(0,-(y0+pad));card(P,x,y0,w,ch,32);g.zOrder(ZOrderMethod.BRINGTOFRONT);}
+function s2(P,d){bg(P,NAVY);poly(P,[[AW,96/SL],[AW,AH],[AW+96-SL*AH,AH]],WHITE);   // cuña blanca que sigue en la placa 3
+  var y=title(P,d.title,ML,150,{size:68,c:WHITE,w:840,e:d.te,bar:'l'});
+  var p=T(P,d.txt,ML,y+56,{f:F.r,size:34,c:WHITE,w:820,lead:48,hc:WHITE});y+=56+p.height+56;
+  for(var i=0;i<d.facts.length;i++){var ft=T(P,d.facts[i][1],0,0,{f:F.r,size:32,c:GRAY,hc:NAVY}),fw=ft.width+190;   // tarjetas de dato (referencia)
+    scard(P,ML,y,fw,100,RED,WHITE,false);E(P,d.facts[i][0],ML+86,y+50,58);ft.zOrder(ZOrderMethod.BRINGTOFRONT);ft.left=X(ML+140);vc(ft,y+50);y+=120;}
+  var u=T(P,d.cierre,ML+150,0,{f:F.s,size:31,c:WHITE,w:650,lead:41}),h=Math.max(u.height+96,170),by=AH-110-h;
+  var bx=rr(P,ML-10,by,850,h,32,WHITE);bx.opacity=12;circ(P,ML+66,by+h/2,50,WHITE);E(P,d.ee,ML+66,by+h/2,64);
+  u.zOrder(ZOrderMethod.BRINGTOFRONT);vc(u,by+h/2);}
 
-function gridV(P,x,y,w,h,c,i){card(P,x,y,w,h,32);var g=P.groupItems.add(),cx=x+w/2,ts=c.ts||32;circ(g,cx,y+62,60,TINT[i%2]);E(g,c.e,cx,y+62,82);
-  var t=T(g,c.t,cx,y+150,{f:F.b,size:ts,c:NAVY,just:'c',w:w-44,lead:Math.round(ts*1.15)});
-  if(c.d)T(g,c.d,cx,y+150+t.height+10,{f:F.r,size:25,c:GRAY,just:'c',w:w-54,lead:32});
-  var b=g.geometricBounds;g.translate(0,Y(y+(h-(b[1]-b[3]))/2)-b[1]);}
-function gridR(P,x,y,w,h,c,i){card(P,x,y,w,h,32);var g=P.groupItems.add(),tx=x+176,tw=w-206;
-  var t=T(g,c.t,tx,0,{f:F.b,size:c.ts||32,c:NAVY,w:tw,lead:38}),bh=t.height;
-  if(c.d){var u=T(g,c.d,tx,bh+8,{f:F.r,size:26,c:GRAY,w:tw,lead:34});bh+=8+u.height;}
-  g.translate(0,-(y+(h-bh)/2));circ(P,x+92,y+h/2,60,TINT[i%2]);E(P,c.e,x+92,y+h/2,80);}
-function grid(P,d,T0,B0){var cs=d.cards,cols=d.cols,rows=Math.ceil(cs.length/cols),gap=d.gap||24,fn=d.card=='r'?gridR:gridV;
-  var cw=(CW-(cols-1)*gap)/cols,ch=Math.min((B0-T0-(rows-1)*gap)/rows,d.maxH||9999),tot=rows*ch+(rows-1)*gap,oy=T0+(B0-T0-tot)/2;
-  for(var i=0;i<cs.length;i++){if(d.cts&&!cs[i].ts)cs[i].ts=d.cts;fn(P,MG+(i%cols)*(cw+gap),oy+Math.floor(i/cols)*(ch+gap),cw,ch,cs[i],i);}}
+function s3(P,d){bg(P,WHITE);poly(P,[[0,0],[96,0],[0,96/SL]],NAVY);
+  var y=title(P,d.title,MX,150,{size:66,c:NAVY,f:F.r,just:'c',w:900,bar:'w'});
+  var s=T(P,d.sub,MX,y+42,{f:F.s,size:34,c:NAVY,just:'c'});y+=42+s.height+54;
+  for(var i=0;i<d.items.length;i++){var it=d.items[i],ch=164,x=110,w=860,cy=y+ch/2;scard(P,x,y,w,ch,RED,WHITE,true);
+    rr(P,x+54,cy-48,96,96,24,TINT[i%2]);E(P,it[0],x+102,cy,64);
+    var g=P.groupItems.add(),a=T(g,it[1],x+186,0,{f:F.r,size:33,c:GRAY,w:w-220,lead:40,hc:NAVY});
+    T(g,it[2],x+186,a.height+8,{f:F.r,size:26,c:GRAY,w:w-220,lead:33});gc(g,cy);y+=ch+26;}
+  T(P,d.foot,MX,y+44,{f:F.s,size:30,c:NAVY,just:'c',w:900,lead:40,hc:NAVY});}
 
-function listas(P,d,T0,B0){var cs=d.cols,n=cs.length,gap=30,hh=88,nr=0,tot=(n-1)*gap,i,j;for(i=0;i<n;i++)nr+=cs[i].rows.length;
-  var rowH=Math.min((B0-T0-(n-1)*gap-n*(hh+48))/nr,d.maxRow||92),y;for(i=0;i<n;i++)tot+=hh+48+cs[i].rows.length*rowH;
-  y=T0+(B0-T0-tot)/2;
-  for(i=0;i<n;i++){var c=cs[i],th=TH[c.c||'navy'],h=hh+48+c.rows.length*rowH,hy=y+14+hh/2,x=MG,w=CW,cr=32,ry=y+14+hh+17;
-    card(P,x,y,w,h,32);rr(P,x+14,y+14,w-28,hh,24,th.m);circ(P,x+66,hy,32,WHITE);E(P,c.e,x+66,hy,44);
-    var t=T(P,c.t,x+118,0,{f:F.b,size:34,c:WHITE});vc(t,hy);
-    for(j=0;j<c.rows.length;j++){var r=c.rows[j],cy=ry+rowH*(j+0.5),cx=x+40+cr;
-      if(j>0)line(P,[[x+36,ry+rowH*j],[x+w-36,ry+rowH*j]],LINE,1.6);
-      circ(P,cx,cy,cr,th.t);E(P,r[0],cx,cy,cr*1.3);
-      var u=T(P,r[1],cx+cr+26,0,{f:F.s,size:d.rt||29,c:INK,w:w-(cx+cr+26-x)-36,lead:36});vc(u,cy);}
-    y+=h+gap;}}
+function s4(P,d){bg(P,WHITE);
+  var y=title(P,d.title,MX,130,{size:66,c:NAVY,f:F.r,just:'c',w:900,bar:'w'})+64;
+  for(var i=0;i<d.cols.length;i++){var c=d.cols[i],n=c.rows.length,rh=64,x=80,w=920,h=44+80+14+n*rh+36,hy=y+44+40;
+    scard(P,x,y,w,h,TH[c.c].m,BG2,false);circ(P,x+98,hy,40,WHITE);E(P,c.e,x+98,hy,54);
+    var t=T(P,c.t,x+158,0,{f:F.b,size:40,c:NAVY});vc(t,hy);
+    for(var j=0;j<n;j++){var cy=y+44+80+14+rh*(j+0.5);E(P,c.rows[j][0],x+178,cy,42);var u=T(P,c.rows[j][1],x+222,0,{f:F.r,size:31,c:GRAY});vc(u,cy);}
+    y+=h+32;}}
 
-function fecha(P,d,T0,B0){var w=440,h=460,band=130,g=P.groupItems.add();
-  var a=T(g,d.pre,MX,0,{f:F.s,size:34,c:GRAY,just:'c'}),cal=a.height+54,y=cal+h+56;   // el calendario va entre el rótulo y el texto
-  var c=T(g,d.txt,MX,y,{f:F.r,size:28,c:INK,just:'c',w:860,lead:38});y+=c.height+40;
-  pill(g,d.cta,MX,y,{f:F.b,size:27,bg:RED,c:WHITE,h:68,px:34,anchor:'c',sh:true});y+=68;
-  var top=T0+(B0-T0-y)/2,x0=MX-w/2,y0=top+cal;g.translate(0,-top);
-  card(P,x0,y0,w,h,40);rr(P,x0,y0,w,band,40,NAVY);rr(P,x0,y0+band-44,w,44,0,NAVY);
-  var m=T(P,d.mes,MX,0,{f:F.b,size:40,c:WHITE,just:'c',tr:120});vc(m,y0+band/2+4);
-  rr(P,x0+100,y0-24,22,52,11,RED);rr(P,x0+w-122,y0-24,22,52,11,RED);
-  var n=T(P,d.dia,MX,0,{f:F.b,size:230,c:RED,just:'c',tr:-30});vc(n,y0+band+(h-band)/2+8);
-  sat(P,x0+w-4,y0+h-8,52,'alarm-clock');}
+function s5(P,d){bg(P,BG);
+  var y=title(P,d.title,ML,130,{size:56,c:NAVY,f:F.r,w:860,e:d.te,bar:'w'});
+  var s=T(P,d.sub,ML,y+40,{f:F.s,size:33,c:NAVY,w:840,lead:43});y+=40+s.height+50;
+  var n=d.items.length,rh=108,pad=38,h=2*pad+n*rh,x=80,w=920,b=card(P,x,y,w,h,40);b.stroked=true;b.strokeColor=NAVY;b.strokeWidth=1.6;
+  for(var i=0;i<n;i++){var cy=y+pad+rh*(i+0.5);rr(P,x+62,cy-42,84,84,22,TINT[0]);E(P,d.items[i][0],x+104,cy,58);
+    var t=T(P,d.items[i][1],x+186,0,{f:F.r,size:33,c:GRAY});vc(t,cy);}
+  T(P,d.foot,ML,y+h+60,{f:F.b,size:32,c:NAVY,w:860,lead:42});}
 
-function cta(P,d,T0,B0){var x=MG,y=T0+10,w=CW,h=AH-50-y,R=d.R||165,sh=150,ts=d.ts||54,g=P.groupItems.add();
-  var t=T(g,d.h1,MX,0,{f:F.b,size:ts,c:WHITE,just:'c',w:w-80,lead:Math.round(ts*1.1),tr:-15}),yy=t.height+28;
-  rr(g,MX-40,yy,80,8,0,RED);yy+=8+32;
-  var b=T(g,d.body,MX,yy,{f:F.r,size:28,c:WHITE,just:'c',w:820,lead:38,hc:WHITE});yy+=b.height+44;
-  pill(g,d.cta,MX,yy,{f:F.b,size:27,bg:WHITE,c:NAVY,h:70,px:32,e:'writing-hand',anchor:'c',sh:true});yy+=70;
-  var cy=y+(h-sh-(2*R+60+yy))/2+R;   // badge + texto centrados sobre la firma
-  card(P,x,y,w,h,40,NAVY);badge(P,MX,cy,R,d.ce,null,{es:0.82});
-  sat(P,MX+R+2,cy-R+50,52,'graduation-cap');sat(P,MX-R-2,cy+R-60,48,'heart-hands');
-  g.translate(0,-(cy+R+60));g.zOrder(ZOrderMethod.BRINGTOFRONT);
-  var ly=y+h-sh;line(P,[[x+70,ly],[x+w-70,ly]],RULE,1.6);
-  var s1=T(P,d.s1,MX,ly+36,{f:F.b,size:27,c:WHITE,just:'c'});T(P,d.s2,MX,ly+36+s1.height+8,{f:F.r,size:23,c:SKY,just:'c'});}
+function s6(P,d){bg(P,BG2);
+  var y=title(P,d.title,MX,110,{size:62,c:NAVY,f:F.r,just:'c',w:700,bar:'w'});
+  E(P,'hourglass-not-done',178,200,150,14);E(P,'alarm-clock',905,250,150,-12);   // emojis inclinados a los lados, como los calendarios de la referencia
+  var top=y+60,x=60,w=960,pad=56,cw=300,chh=330,g=P.groupItems.add();
+  var a=T(g,d.pre,MX,0,{f:F.s,size:34,c:WHITE,just:'c'}),yy=a.height+54,cal=yy;yy+=chh+52;
+  var c=T(g,d.txt,MX,yy,{f:F.r,size:30,c:WHITE,just:'c',w:860,lead:42,hc:WHITE});yy+=c.height+46;
+  var wy=yy,h=yy+112+2*pad;card(P,x,top,w,h,56,NAVY);g.translate(0,-(top+pad));g.zOrder(ZOrderMethod.BRINGTOFRONT);
+  calW(P,MX,top+pad+cal,cw,chh,d.mes,d.dia);
+  var ay=top+pad+wy,ax=130;scard(P,ax,ay,820,112,RED,WHITE,false);E(P,'warning',ax+104,ay+56,72);
+  var t=T(P,d.cta,ax+176,0,{f:F.r,size:35,c:NAVY,hc:NAVY});vc(t,ay+56);}
+
+function s7(P,d){bg(P,NAVY);poly(P,[[0,0],[170,0],[0,AH]],BG2);   // cuña gris que viene de la placa 6
+  var xl=200;badge(P,810,290,150,d.ce);sat(P,810+140,290-120,52,'graduation-cap');sat(P,810-148,290+118,46,'heart-hands');
+  var y=title(P,d.h1,xl,500,{size:62,c:WHITE,w:780,bar:'l'});
+  var b=T(P,d.body,xl,y+50,{f:F.r,size:32,c:WHITE,w:800,lead:44,hc:WHITE});y+=50+b.height+50;
+  banner(P,d.cta,xl,y,{size:30,h:78,bg:WHITE,c:NAVY,f:F.b,px:30,e:'writing-hand'});
+  var ly=1165;line(P,[[xl,ly],[AW-100,ly]],RULE,1.6);
+  var s1t=T(P,d.s1,xl,ly+30,{f:F.b,size:28,c:WHITE});T(P,d.s2,xl,ly+30+s1t.height+6,{f:F.r,size:24,c:SKY});}
 
 // ---------- contenido ----------
 var DATA=[
-{name:'01 Portada',type:'portada',ce:'blue-heart',cl:'¡Convocatoria abierta!',
- h1:'Cuidar a otros también\nmerece acompañamiento',
- proj:'Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores',
- ini:'Una iniciativa del Consultorio Psicológico Universitario de la Universidad Central.'},
-{name:'02 De que se trata',type:'espacio',te:'handshake',title:'Un espacio para acompañar\na quienes cuidan',ce:'heart-hands',cl:'Espacio virtual',cle:'laptop',
+{name:'01 Portada',type:'s1',marca:'Consultorio Psicológico\rUniversitario',h1:'Cuidar a otros\ntambién merece\nacompañamiento',te:'blue-heart',
+ cl:'¡Convocatoria abierta!',sub:'Proyecto Comunitario de **Apoyo Psicoeducativo a Cuidadores_**',
+ ini:'Una iniciativa del Consultorio Psicológico Universitario de la Universidad Central.',ce:'heart-hands'},
+{name:'02 De que se trata',type:'s2',te:'handshake',title:'Un espacio\npara acompañar\na quienes cuidan',
  txt:'El proyecto busca brindar **acompañamiento psicoeducativo**, a través de un **espacio virtual**, a personas que tienen a su cargo el cuidado de familiares o de quienes necesitan asistencia.',
- cierre:'Una propuesta que pone en el centro el bienestar de quienes dedican parte de su vida a cuidar de otros.',ee:'blue-heart'},
-{name:'03 A quienes esta dirigido',type:'grid',card:'r',cols:1,maxH:200,te:'graduation-cap',title:'¿Quiénes pueden sumarse\nal proyecto?',sub:'La convocatoria está dirigida a:',cards:[
- {e:'brain',t:'Estudiantes de Psicología',d:'De los últimos años de la carrera.'},
- {e:'teacher',t:'Estudiantes de Educación',d:'De los últimos años de la carrera.'},
- {e:'briefcase',t:'Estudiantes en prácticas',d:'En cualquiera de estas carreras.'}],
- foot:'Una oportunidad para vincular tu formación académica con una iniciativa de apoyo a la comunidad.',fe:'link'},
-{name:'04 Asignaturas vinculadas',type:'listas',te:'books',title:'¿Qué materias forman\nparte del proyecto?',cols:[
+ cierre:'Una propuesta que pone en el centro el bienestar de quienes dedican parte de su vida a cuidar de otros.',ee:'blue-heart',facts:[['brain','Acompañamiento **psicoeducativo**'],['laptop','A través de un **espacio virtual**']]},
+{name:'03 A quienes esta dirigido',type:'s3',title:'¿Quiénes pueden\n**sumarse** al proyecto?',sub:'La convocatoria está dirigida a:',items:[
+ ['brain','Estudiantes de **Psicología**','De los últimos años de la carrera.'],
+ ['teacher','Estudiantes de **Educación**','De los últimos años de la carrera.'],
+ ['briefcase','Estudiantes **en prácticas**','En cualquiera de estas carreras.']],
+ foot:'Una oportunidad para vincular tu formación académica con una iniciativa de **apoyo a la comunidad.**'},
+{name:'04 Asignaturas vinculadas',type:'s4',title:'¿Qué **materias** forman\nparte del proyecto?',cols:[
  {t:'Psicología',e:'brain',c:'navy',rows:[['clipboard','Evaluación Psicológica'],['school','Práctica 1 Educacional'],['speech-balloon','Práctica 2 Clínica'],['magnifying-glass-tilted-left','Psicodiagnóstico']]},
  {t:'Educación',e:'teacher',c:'red',rows:[['open-book','Psicología General'],['student','Psicología de la Educación'],['people-hugging','Educación Inclusiva']]}]},
-{name:'05 A quienes buscamos acompanar',type:'grid',cols:2,maxH:300,te:'blue-heart',ts:50,
- title:'Detrás de cada persona que\nnecesita cuidados, hay alguien\nque también necesita apoyo',
- sub:'Este espacio está pensado para quienes cuidan a personas que requieren asistencia por:',cards:[
- {e:'face-with-thermometer',t:'Enfermedad'},{e:'wheelchair-symbol',t:'Discapacidad'},{e:'crutch',t:'Dependencia funcional'},{e:'older-person',t:'Envejecimiento'}],
- foot:'Porque quienes cuidan también necesitan sentirse acompañados.',fe:'heart-hands'},
-{name:'06 Fechas importantes',type:'fecha',te:'hourglass-not-done',title:'¡Todavía estás a tiempo\nde sumarte!',
- pre:'Inscripciones abiertas hasta el',dia:'26',mes:'OCTUBRE',
- txt:'Si estudiás **Psicología** o **Educación** y cumplís con el perfil de la convocatoria, esta es tu oportunidad de participar.',cta:'¡No dejes pasar la fecha!'},
-{name:'07 Cierre',type:'cta',ce:'blue-heart',h1:'Tu formación también\npuede marcar una diferencia',
- body:'Sumate al **Proyecto Comunitario de Apoyo Psicoeducativo a Cuidadores** y formá parte de una iniciativa que busca acompañar a quienes cuidan.',
+{name:'05 A quienes buscamos acompanar',type:'s5',te:'blue-heart',title:'Detrás de cada persona que necesita cuidados, **hay alguien que también necesita apoyo**',
+ sub:'Este espacio está pensado para quienes cuidan a personas que requieren asistencia por:',items:[
+ ['face-with-thermometer','Enfermedad.'],['wheelchair-symbol','Discapacidad.'],['crutch','Dependencia funcional.'],['older-person','Envejecimiento.']],
+ foot:'Porque quienes cuidan también necesitan sentirse acompañados.'},
+{name:'06 Fechas importantes',type:'s6',title:'**¡Todavía estás**\n**a tiempo** de\nsumarte!',pre:'Inscripciones abiertas hasta el',mes:'OCTUBRE',dia:'26',
+ txt:'Si estudiás **Psicología** o **Educación**\ny cumplís con el perfil de la convocatoria,\nesta es tu oportunidad de participar.',cta:'**¡No dejes pasar** la fecha!'},
+{name:'07 Cierre',type:'s7',ce:'blue-heart',h1:'Tu formación también puede marcar una diferencia',
+ body:'Sumate al **Proyecto Comunitario de Apoyo\nPsicoeducativo a Cuidadores** y formá\nparte de una iniciativa que busca\nacompañar a quienes cuidan.',
  cta:'¡Inscribite y sé parte del proyecto!',s1:'Universidad Central del Paraguay',s2:'Consultorio Psicológico Universitario'}
 ];
 
-// ---------- construcción ----------
-var BUILD={portada:portada,espacio:espacio,grid:grid,listas:listas,fecha:fecha,cta:cta};
+// ---------- construcción (mesas pegadas, para ver la continuidad de las diagonales) ----------
+var BUILD={s1:s1,s2:s2,s3:s3,s4:s4,s5:s5,s6:s6,s7:s7};
 N=DATA.length;
 var fo=new Folder(DIR);if(!fo.exists)fo.create();
-var doc=app.documents.add(DocumentColorSpace.RGB,AW,AH,N,DocumentArtboardLayout.GridByRow,60,N);
+var doc=app.documents.add(DocumentColorSpace.RGB,AW,AH,N,DocumentArtboardLayout.GridByRow,0,N);
 try{var ro=doc.rasterEffectSettings;ro.resolution=150;doc.rasterEffectSettings=ro;}catch(e){ERR.push('res '+e);}
 GR=doc.gradients.add();GR.name='FEaD Rojo-Naranja';GR.type=GradientType.LINEAR;GR.gradientStops[0].color=RED;GR.gradientStops[1].color=ORG;
 var tmpL=doc.layers[0];tmpL.name='tmp';TMP=tmpL.textFrames.add();TMP.contents='x';
 for(var i=0;i<N;i++){var d=DATA[i],ab=doc.artboards[i];ab.name=d.name;var r=ab.artboardRect;AX=r[0];AY=r[1];
   var L=doc.layers.add();L.name=d.name;
-  try{rr(L,0,0,AW,AH,0,BG);var y0=header(L,d),y1=footer(L,d);BUILD[d.type](L,d,y0,y1);}catch(e){ERR.push(d.name+': '+e+' @'+e.line);}}
+  try{BUILD[d.type](L,d);}catch(e){ERR.push(d.name+': '+e+' @'+e.line);}}
 TMP.remove();tmpL.remove();
 doc.saveAs(new File(DIR+OUT));
 app.userInteractionLevel=UserInteractionLevel.DISPLAYALERTS;
-var MSG='OK '+N+' placas'+(ERR.length?' | '+ERR.join(' || '):'')+'\rGuardado en '+DIR+OUT;
+var MSG='OK '+N+' placas'+(ERR.length?' | '+ERR.join(' || '):'')+(NOTE.length?'\r'+NOTE.join('\r'):'')+'\rGuardado en '+DIR+OUT;
 alert(MSG);MSG;
