@@ -1,0 +1,3 @@
+Íconos de Font Awesome Free 6 (solid) — https://fontawesome.com
+Licencia de los íconos: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Copyright Fonticons, Inc.
+Se usan convertidos a trazados dentro de los scripts de la línea Manu.
